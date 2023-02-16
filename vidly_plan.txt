@@ -1,0 +1,23 @@
+##########
+#Datatypes needed:
+#random integer
+#random choice weighted probability
+#random date within range
+
+#https://github.com/russlooker/vision_image/blob/main/main.py
+##########  Vidly ###########
+# Salesforce -> ad accounts
+# Salesforce -> ad opportunities
+# Salesforce -> ad leads
+# Salesforce -> ad contacts
+# users ->
+# user_billing 
+# payment methods
+# app_events
+# video
+# video_regions
+# reccomendations
+# producers
+# marketing -> google analytics
+# producer_royalties
+######################
