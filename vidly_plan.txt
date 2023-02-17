@@ -16,7 +16,6 @@
 # app_events
 # ad_plays
 # video
-# video_regions
 # reccomendations
 # producers
 # marketing -> google analytics

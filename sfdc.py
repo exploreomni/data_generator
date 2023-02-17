@@ -2,17 +2,18 @@ import itertools
 from dataclasses import dataclass, field, InitVar
 from faker import Faker
 from dataclass_csv import dateformat
-from lib.providers import fortune500, sfdc_ids, dates, probability
+# from lib.providers import fortune500, sfdc_ids, dates, probability
+from lib.providers import companies, dates, probability, sfdc
 from lib.table import Table
 from lib import helpers
 from datetime import datetime
 import random
 
 fake = Faker()
-fake.add_provider(sfdc_ids)
-fake.add_provider(fortune500)
-fake.add_provider(dates)
-fake.add_provider(probability)
+fake.add_provider(sfdc.sfdc_ids)
+fake.add_provider(companies.fortune500)
+fake.add_provider(dates.dates)
+fake.add_provider(probability.probability)
 #TODO: pick_existing, filter functionality (helps tie specific records together)
 #TODO: create more helper functions for various probability distributions
 #TODO: create more helper functions for various geographic distributions (world population distribution, etc)

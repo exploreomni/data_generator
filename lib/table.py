@@ -39,6 +39,8 @@ class Table(type):
                     
             except FileNotFoundError:
                 pass
+        if 'generate_new' in kw and not kw['generate_new']:
+            return None
  
         #remove the load_existing kwarg / should not be passed into an instance
         kw.pop('load_existing', None)
