@@ -262,7 +262,9 @@ class Table(type):
                 database=os.environ['SF_DATABASE'],
                 schema=os.environ['SF_SCHEMA'],
                 role=os.environ['SF_ROLE']
-            ))
+            ), 
+            pool_reset_on_return=None
+            )
 
     def push_to_sf(cls) -> None:
         cls.__init__snowflake()
@@ -272,7 +274,8 @@ class Table(type):
         ), *cls.sqlalchemy_fields)
         the_table.drop(engine, checkfirst=True)
         the_table.create(engine, checkfirst=True)
-        load_statement = f'''
+        result = engine.execute(
+            f'''
             /* Standard data load */
             COPY INTO {cls.__table_name__}
                 FROM @{ os.environ['SF_STAGE_NAME'] }
@@ -284,12 +287,15 @@ class Table(type):
                                 FIELD_OPTIONALLY_ENCLOSED_BY = '"'
                                 EMPTY_FIELD_AS_NULL = TRUE
                                 NULL_IF = ""
-                                ) 
+                                )
+              FORCE = TRUE
             '''
-        engine.execute(
-            load_statement
-        )
-        print(f"Loaded {cls.__table_name__} to Snowflake")
+        ).fetchall()
+        engine.execute('COMMIT').fetchall()
+
+        
+        print(f"Loaded {result[0][3]} rows to Snowflake {os.environ['SF_DATABASE']}"
+              f".{os.environ['SF_SCHEMA']}.{cls.__table_name__}")
 
     def push_to_dbs(cls) -> None:
         ''' Performs upload to GCS, push to BQ and push to Snowflake '''
