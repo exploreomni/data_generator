@@ -6,7 +6,7 @@ from dataclass_csv import dateformat
 from lib.providers import companies, dates, probability, sfdc
 from lib.table import Table
 from lib import helpers
-from datetime import datetime
+from datetime import datetime, date
 import random
 
 fake = Faker()
@@ -24,7 +24,7 @@ fake.add_provider(probability.probability)
 
 @dataclass
 class SFDCUser(metaclass=Table):
-    id: int = field(init=False)
+    id: str = field(init=False)
     first_name: str = field(default_factory=fake.first_name)
     last_name: str = field(default_factory=fake.last_name)
     email: str = field(init=False)
@@ -110,12 +110,12 @@ class Account(metaclass=Table):
 @dataclass
 @dateformat('%Y-%m-%dT%H:%M:%S.%fZ')
 class Opportunity(metaclass=Table):
-    id:int = field(init=False)
+    id:str = field(init=False)
     value: int = field(default_factory=fake.random_int)
-    account_id: int = field(init=False)
+    account_id: str = field(init=False)
     owner_id: str = field(init=False)
-    opened_date: datetime = field(default_factory=fake.date_time_recent)
-    closed_date: datetime = field(init=False)
+    opened_date: date = field(default_factory=fake.date_time_recent)
+    closed_date: date = field(init=False)
     name: str = field(init=False)
     status: str = field(init=False)
     stage_name: str = field(init=False)
@@ -147,10 +147,9 @@ class Opportunity(metaclass=Table):
 
 
 if __name__ == '__main__':
-    for i in range(fake.poisson(10)):
-        SFDCUser(load_existing=True)
-    for i in range(fake.poisson(25)):
-        Account(load_existing=True)
-    for i in range(fake.poisson(20)):
-        Contact(load_existing=True)
+    #Should be generated in the correct DAG order
+    SFDCUser.generate(count=fake.poisson(10), load_existing=True)
+    Account.generate(count=fake.poisson(10), load_existing=True)
+    Contact.generate(count=fake.poisson(25), load_existing=True)
     Table.writeall()
+    Table.pushall()

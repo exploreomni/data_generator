@@ -60,7 +60,7 @@ class user(metaclass=Table):
     def after_first_run(self):
         ...
 
-#TODO: techincally I agreed to link back to https://simplemaps.com/data/us-zips in order to get the zip code data. or could buy it for 199
+
 
 
 # user_billing 
@@ -78,3 +78,7 @@ if __name__ == '__main__':
         user(load_existing=True)
 
     Table.writeall()
+
+
+#TODO: techincally I agreed to link back to https://simplemaps.com/data/us-zips in order to get the zip code data. or could buy it for 199
+#TODO: consider using themovieDB for movie data, it has commercial licensing

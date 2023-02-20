@@ -5,23 +5,39 @@ from operator import attrgetter
 from dataclasses import dataclass, field
 from pydash import set_, get
 import random
+import sqlalchemy as SA
+from dotenv import load_dotenv
+load_dotenv()
+from dataclasses import dataclass, field, fields
+from datetime import datetime, date
+from google.cloud import storage
+from google.cloud import bigquery
+import os
 
 MAX_UNIQUE_ATTEMPTS = 500
+
+#TODO: currently the user must call the generation in the 
+# correct DAG order, if the post_init uses a field from another table (pick_existing, etc)
+# perhaps we can use the __loaded__ variable of len(cls.instances) > 0 to determine if we should
+# throw an exception inidicating they should be called in a different order
 
 class Table(type):
     __class_registry__:set = set()
     __loaded__:Dict[type,bool] = dict()
+    __snowflake__ = None #slot to store the snowflake connection
+    __bigquery__ = None #slot to store the bigquery connection
+    
     def __init__(cls, name, bases, attrs, **kw):
         super().__init__(name, bases, attrs, **kw)
         cls.__class_registry__.add(cls)
-        cls.instances = list()
-        cls.__seed_defaults__ = dict()
-        cls.__seen__ = dict()
+        cls.instances = list() #stores the instances of this class which have been generated
+        cls.__seed_defaults__ = dict() #stores the default_factory for fields using itertools.count (smoth sequences)
+        cls.__seen__ = dict() #slot to store the seen values for unique fields
 
     def __call__(cls, *args, **kw) -> Any:
         if 'load_existing' in kw and kw['load_existing'] and cls not in cls.__loaded__:
             try:
-                with open(f'output/{cls.__name__.lower()}.csv', 'r') as f:
+                with open(cls.__file_path__, 'r') as f:
                     existing_instances = DataclassReader(f, cls)
                     cls.instances = list(existing_instances)
                     cls.__loaded__[cls] = True
@@ -113,6 +129,176 @@ class Table(type):
             sub.write()
     
     def write(cls) -> None:
-        with open(f'output/{cls.__name__.lower()}.csv', 'w') as f:
-            x = DataclassWriter(f, cls.instances, cls, dialect='unix')
-            x.write()
+        with open(cls.__file_path__, 'w') as f:
+            writerInstance = DataclassWriter(f, cls.instances, cls, dialect='unix')
+            writerInstance.write()
+
+    def generate(cls, count:int = 1, **kwargs) -> None:
+        '''
+        Generate a number of instances of a class
+        Args:
+            count: number of instances to generate
+            kwargs: keyword arguments to pass to the constructor
+                load_existing: if True, will load existing data from the csv file
+                generate_new: if False, will not generate new data
+        '''
+        for _ in range(count):
+            cls(**kwargs)
+
+    @property
+    def sqlalchemy_fields(cls) -> List[SA.Column]:
+        cols = list()
+        for f in fields(cls):
+            # print(f.name, f.type)
+            if f.type == str:
+                cols.append(SA.Column(f.name, SA.String))
+            elif f.type == int:
+                cols.append(SA.Column(f.name, SA.Integer))
+            elif f.type == float:
+                cols.append(SA.Column(f.name, SA.Float))
+            elif f.type == bool:
+                cols.append(SA.Column(f.name, SA.Boolean))
+            elif f.type == list:
+                cols.append(SA.Column(f.name, SA.ARRAY(SA.String)))
+            elif f.type == dict:
+                cols.append(SA.Column(f.name, SA.JSON))
+            elif f.type == date:
+                cols.append(SA.Column(f.name, SA.Date))                
+            elif f.type == datetime:
+                cols.append(SA.Column(f.name, SA.DateTime))
+            else:
+                raise Exception(f'Unknown type {f.type}')
+        return cols
+    
+    @property
+    def bq_fields(cls):
+        cols = list()
+        for f in fields(cls):
+            if f.type == str:
+                cols.append(bigquery.SchemaField(f.name, "STRING"))
+            elif f.type == int:
+                cols.append(bigquery.SchemaField(f.name, "INT64"))
+            elif f.type == float:
+                cols.append(bigquery.SchemaField(f.name, "FLOAT64"))
+            elif f.type == bool:
+                cols.append(bigquery.SchemaField(f.name, "BOOL"))
+            elif f.type == list:
+                cols.append(bigquery.SchemaField(f.name, "ARRAY"))
+            elif f.type == dict:
+                cols.append(bigquery.SchemaField(f.name, "STRUCT"))
+            elif f.type == date:
+                cols.append(bigquery.SchemaField(f.name, "DATETIME"))
+            elif f.type == datetime:
+                cols.append(bigquery.SchemaField(f.name, "DATETIME"))
+            else:
+                raise Exception(f'Unknown type {f.type}')
+        return cols
+
+    @property
+    def __table_name__(cls):
+        return cls.__name__.lower()
+    
+    @property
+    def __file_name__(cls):
+        return f'{cls.__table_name__}.csv'
+    
+    @property
+    def __file_path__(cls):
+        return f"{os.environ['OUTPUT_FOLDER']}/{cls.__file_name__}"
+
+    def upload(cls):
+        """
+        Uploads a file to the bucket.
+        # bucket_name = "your-bucket-name"
+        # source_file_name = "local/path/to/file"
+        # destination_blob_name = "storage-object-name"
+        :return:
+        """
+        gcp_client = storage.Client()
+        bucket = gcp_client.bucket(os.environ['GCS_BUCKET'])
+        blob = bucket.blob(cls.__file_name__)
+        blob.upload_from_filename(cls.__file_path__)
+        print("File {} uploaded to {}.".format(cls.__file_path__, cls.__file_name__))
+
+    @classmethod
+    def __init__bq(cls):
+        if not cls.__bigquery__:
+            cls.__bigquery__ = bigquery.Client()
+
+    def push_to_bq(cls) -> None:
+        # client = bigquery.Client()
+        cls.__init__bq()
+        client = cls.__bigquery__
+        job_config = bigquery.LoadJobConfig(
+            # autodetect=True, 
+            schema=cls.bq_fields,
+            source_format=bigquery.SourceFormat.CSV,
+            skip_leading_rows=1,
+        )
+        BQ_PROJECT = os.environ['BQ_PROJECT']
+        BQ_DATASET = os.environ['BQ_DATASET']
+        uri = f"gs://{os.environ['GCS_BUCKET']}/{cls.__file_name__}"
+        table_id = f"{BQ_PROJECT}.{BQ_DATASET}.{cls.__table_name__}"
+        #drop table if exists
+        client.delete_table(table_id, not_found_ok=True)
+        #create table
+        load_job = client.load_table_from_uri(
+            uri, table_id, job_config=job_config
+        )  # Make an API request.
+        load_job.result()  # Waits for the job to complete.
+        destination_table = client.get_table(table_id)
+        print(f"Loaded {destination_table.num_rows} rows to BigQuery {table_id}")
+
+    @classmethod
+    def __init__snowflake(cls):
+        if not cls.__snowflake__:
+            from snowflake.sqlalchemy import URL
+            from sqlalchemy.engine import create_engine
+            cls.__snowflake_engine__ = create_engine(URL(
+                user=os.environ['SF_USER'],
+                password=os.environ['SF_PASSWORD'],
+                account=os.environ['SF_ACCOUNT'],
+                warehouse=os.environ['SF_WAREHOUSE'],
+                database=os.environ['SF_DATABASE'],
+                schema=os.environ['SF_SCHEMA'],
+                role=os.environ['SF_ROLE']
+            ))
+
+    def push_to_sf(cls) -> None:
+        cls.__init__snowflake()
+        engine = cls.__snowflake_engine__
+        the_table = SA.Table(cls.__table_name__, SA.MetaData(
+            schema=os.environ['SF_SCHEMA']
+        ), *cls.sqlalchemy_fields)
+        the_table.drop(engine, checkfirst=True)
+        the_table.create(engine, checkfirst=True)
+        load_statement = f'''
+            /* Standard data load */
+            COPY INTO {cls.__table_name__}
+                FROM @{ os.environ['SF_STAGE_NAME'] }
+              FILES = ( '{cls.__file_name__}' ) 
+              FILE_FORMAT = ( 
+                                TYPE = CSV 
+                                SKIP_HEADER = 1 
+                                FIELD_DELIMITER = ','
+                                FIELD_OPTIONALLY_ENCLOSED_BY = '"'
+                                EMPTY_FIELD_AS_NULL = TRUE
+                                NULL_IF = ""
+                                ) 
+            '''
+        engine.execute(
+            load_statement
+        )
+        print(f"Loaded {cls.__table_name__} to Snowflake")
+
+    def push_to_dbs(cls) -> None:
+        ''' Performs upload to GCS, push to BQ and push to Snowflake '''
+        cls.upload()
+        cls.push_to_bq()
+        cls.push_to_sf()
+
+    @classmethod
+    def pushall(cls) -> None:
+        ''' Pushes all registered classes to GCS, BQ and Snowflake'''
+        for sub in cls.__class_registry__:
+            sub.push_to_dbs()
