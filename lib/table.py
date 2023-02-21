@@ -1,4 +1,4 @@
-from dataclass_csv import DataclassReader, DataclassWriter
+from dataclass_csv import DataclassReader, DataclassWriter, dateformat
 from typing import Dict, List, Any
 import itertools
 from operator import attrgetter
@@ -50,6 +50,8 @@ class Table(type):
                                     set_(cls.__seed_defaults__,[cls, k], itertools.count(new_seed).__next__)
                     #run after_first_run hook (extends existing data)
                     for instance in cls.instances:
+                        if 'generate_new' in kw and not kw['generate_new']:
+                            return None
                         if hasattr(instance, 'after_first_run'):
                             instance.after_first_run()
                     
@@ -126,6 +128,9 @@ class Table(type):
     @classmethod
     def writeall(cls) -> None:
         for sub in cls.__class_registry__:
+            #only write if the class has been loaded, which avoids 
+            # an annoying overwrite with blank issue
+            # if sub in cls.__loaded__ and cls.__loaded__[sub]: 
             sub.write()
     
     def write(cls) -> None:
@@ -185,7 +190,9 @@ class Table(type):
             elif f.type == list:
                 cols.append(bigquery.SchemaField(f.name, "ARRAY"))
             elif f.type == dict:
-                cols.append(bigquery.SchemaField(f.name, "STRUCT"))
+                #TODO: no idea how to handle this
+                # cols.append(bigquery.SchemaField(f.name, "STRUCT"))
+                cols.append(bigquery.SchemaField(f.name, "STRING"))
             elif f.type == date:
                 cols.append(bigquery.SchemaField(f.name, "DATETIME"))
             elif f.type == datetime:

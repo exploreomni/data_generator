@@ -8,18 +8,16 @@ from lib.table import Table
 from lib import helpers
 from datetime import datetime, date
 import random
+from dotenv import load_dotenv
+load_dotenv()
+import os
+DATE_FORMAT = os.environ['DATEFORMAT']
 
 fake = Faker()
 fake.add_provider(sfdc.sfdc_ids)
 fake.add_provider(companies.fortune500)
 fake.add_provider(dates.dates)
 fake.add_provider(probability.probability)
-#TODO: pick_existing, filter functionality (helps tie specific records together)
-#TODO: create more helper functions for various probability distributions
-#TODO: create more helper functions for various geographic distributions (world population distribution, etc)
-#TODO: break out a seperate job for other vidly areas
-#TODO: create the loader mechanism to send data to the DB
-
 
 
 @dataclass
@@ -51,6 +49,7 @@ class Contact(metaclass=Table):
         ...
 
 @dataclass
+@dateformat(DATE_FORMAT)
 class Account(metaclass=Table):
     id: str = field(init=False)
     name: str = field(init=False)
@@ -108,14 +107,14 @@ class Account(metaclass=Table):
                         ]
 
 @dataclass
-@dateformat('%Y-%m-%dT%H:%M:%S.%fZ')
+@dateformat(DATE_FORMAT)
 class Opportunity(metaclass=Table):
-    id:str = field(init=False)
+    id:str = field(default_factory=None)
     value: int = field(default_factory=fake.random_int)
     account_id: str = field(init=False)
     owner_id: str = field(init=False)
-    opened_date: date = field(default_factory=fake.date_time_recent)
-    closed_date: date = field(init=False)
+    opened_date: date = field(default_factory=fake.date_time_recent, metadata={'dateformat': DATE_FORMAT})
+    closed_date: date = field(init=False, metadata={'dateformat': DATE_FORMAT})
     name: str = field(init=False)
     status: str = field(init=False)
     stage_name: str = field(init=False)
@@ -123,20 +122,21 @@ class Opportunity(metaclass=Table):
     forecast_category: str = field(init=False)
 
     def __post_init__(self, account: Account):
-        self.id = Opportunity.unique('id', fake.sfdc_opportunity_id)
-        self.owner_id = SFDCUser.pick_existing('id', filter_func=lambda x: x.role_id.endswith('09yOipW000000'))
-        self.account = account
-        self.account_id = account.id
-        opword = random.choice(['marketing team', f'ad spend {datetime.now().year + 1}', f'{datetime.now().year}', 'sales team', 'r&d'])
-        self.name = f'{account.name} {opword}'
-        self.status = fake.random_element(elements=('Open', 'Closed'))
-        self.stage_name = fake.random_element(elements=('Qualify', 'Develop', 'Develop Postive', 'Closed Won', 'Closed Lost'))
-        if self.stage_name.startswith('Closed'):
-            self.closed_date = fake.date_time_between_dates(start=self.opened_date, end=datetime.today())
-            self.forecast_category = self.stage_name
-        else:
-            self.forecast_category = 'Pipeline'
-            self.closed_date = None
+        if account:
+            self.id = Opportunity.unique('id', fake.sfdc_opportunity_id)
+            self.owner_id = SFDCUser.pick_existing('id', filter_func=lambda x: x.role_id.endswith('09yOipW000000'))
+            self.account = account
+            self.account_id = account.id
+            opword = random.choice(['marketing team', f'ad spend {datetime.now().year + 1}', f'{datetime.now().year}', 'sales team', 'r&d'])
+            self.name = f'{account.name} {opword}'
+            self.status = fake.random_element(elements=('Open', 'Closed'))
+            self.stage_name = fake.random_element(elements=('Qualify', 'Develop', 'Develop Postive', 'Closed Won', 'Closed Lost'))
+            if self.stage_name.startswith('Closed'):
+                self.closed_date = fake.date_time_between_dates(start=self.opened_date, end=datetime.today())
+                self.forecast_category = self.stage_name
+            else:
+                self.forecast_category = 'Pipeline'
+                self.closed_date = None
 
     def after_first_run(self):
         if self.status == 'Open':
@@ -148,8 +148,8 @@ class Opportunity(metaclass=Table):
 
 if __name__ == '__main__':
     #Should be generated in the correct DAG order
-    SFDCUser.generate(count=fake.poisson(10), load_existing=True)
-    Account.generate(count=fake.poisson(10), load_existing=True)
-    Contact.generate(count=fake.poisson(25), load_existing=True)
-    Table.writeall()
+    # SFDCUser.generate(count=fake.poisson(10), load_existing=True)
+    # Account.generate(count=fake.poisson(100), load_existing=True)
+    # Contact.generate(count=fake.poisson(110), load_existing=True)
+    # Table.writeall()
     Table.pushall()

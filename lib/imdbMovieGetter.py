@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 import os
 imdb_ids = [
-    'tt14269590', 'tt18335752', 'tt13406094', 'tt4236770'
+    'tt5071412'
 ]
 
 for imdb_id in imdb_ids:
