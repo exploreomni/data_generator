@@ -242,6 +242,7 @@ class app_events(metaclass=Table):
 
 
 if __name__ == "__main__":
+    ...
     # Step 1: ensure Opportunity.id is set to field(default=None)
     # Step 2: run the following block to generate (daily ~250, keep in mind load existing)?
     # Opportunity(load_existing=True, generate_new=False)

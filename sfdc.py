@@ -240,13 +240,12 @@ class Opportunity(metaclass=Table):
 
 
 if __name__ == "__main__":
-    # Should be generated in the correct DAG order
+    ...
+    # Should be generated in the correct DAG order:
+    # step 1: ensure Opportunity.id is set to field(init=False)
     # SFDCUser.generate(count=fake.poisson(10), load_existing=True)
     # Account.generate(count=fake.poisson(15), load_existing=True)
-    # Contact.generate(count=fake.poisson(100), load_existing=True)
+    # Contact.generate(count=fake.poisson(20), load_existing=True)
     ###
-    # SFDCUser.generate(count=fake.poisson(150), load_existing=True)
-    # Account.generate(count=fake.poisson(5000), load_existing=True)
-    # Contact.generate(count=fake.poisson(10000), load_existing=True)
     # Table.writeall()
     Table.pushall()
