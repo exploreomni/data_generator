@@ -7,7 +7,7 @@ class fortune500(BaseProvider):
     def fortune500Company(self) -> dict:
         self.call_counter += 1
         if self.call_counter < 500:
-            return random.choice(
+            company = random.choice(
             [
                 {
                 "RANK": 1,
@@ -6511,6 +6511,11 @@ class fortune500(BaseProvider):
                 },
                 ]
             )
+            company["NAME"] = company["NAME"].title()
+            company["ADDRESS"] = company["ADDRESS"].title()
+            company["CITY"] = company["CITY"].title()
+            company["COUNTY"] = company["COUNTY"].upper()
+            return company
         else:
             fake = Faker()
             return {
