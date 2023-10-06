@@ -40,6 +40,10 @@ class user(metaclass=Table):
     gender: str = field(init=False)
     age: int = field(init=False)
     status: str = field(init=False)
+    traffic_source: str = field(init=False)
+    plan_type:str = field(init=False)
+    subscription_term:str = field(init=False)
+    next_billing_date:datetime = field(init=False, metadata={"dateformat": DATE_FORMAT})
 
     def __post_init__(self):
         self.gender = fake.random_element(elements=("M", "F"))
@@ -61,6 +65,19 @@ class user(metaclass=Table):
         self.city = addr["city"]
         self.state = addr["state"]
         self.zip = addr["zip"]
+        self.traffic_source = random.choices(['Display','Facebook','Search','Organic','Email'], weights=[0.1,0.1,0.3,0.4,0.1], k=1)[0]
+        self.plan_type = random.choices(['Free', 'Paid'], weights=[0.65, 0.35], k=1)[0]
+        if self.plan_type == 'Paid':
+            self.subscription_term = random.choices(['Monthly', 'Annual'], weights=[0.65, 0.35], k=1)[0]
+        else:
+            self.subscription_term = None
+        if self.plan_type == 'Paid':
+            if self.subscription_term == 'Monthly':
+                self.next_billing_date = fake.date_time_between(start_date=datetime.today(), end_date=datetime.today()+timedelta(days=30))
+            elif self.subscription_term == 'Annual':
+                self.next_billing_date = fake.date_time_between(start_date=datetime.today(), end_date=datetime.today()+timedelta(days=365))
+        else:
+            self.next_billing_date = None
         # 1% initial dropoff rate
         if fake.probability(0.01):
             self.status = "Inactive"
@@ -87,6 +104,11 @@ class user(metaclass=Table):
             if fake.probability(0.005):
                 self.status = "Inactive"
             else:
+                if self.plan_type == 'Paid':
+                    if self.subscription_term == 'Monthly':
+                        self.next_billing_date = fake.date_time_between(start_date=datetime.today(), end_date=datetime.today()+timedelta(days=30))
+                    elif self.subscription_term == 'Annual':
+                        self.next_billing_date = fake.date_time_between(start_date=datetime.today(), end_date=datetime.today()+timedelta(days=365))
                 for e in range(fake.poisson(1)):
                     Session(
                         force_user=self,
@@ -252,9 +274,9 @@ if __name__ == "__main__":
     # app_events.write()
 
     # Step 3: push to DBs
-    # user.push_to_dbs()
-    # app_events.push_to_dbs()
-    # videos.push_to_dbs()
+    user.push_to_dbs()
+    app_events.push_to_dbs()
+    videos.push_to_dbs()
 
 
 # TODO: techincally I agreed to link back to https://simplemaps.com/data/us-zips in order to get the zip code data. or could buy it for 199

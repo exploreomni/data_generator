@@ -68,16 +68,27 @@ OPWORDS = [
 
 
 @dataclass
+@dateformat(DATE_FORMAT)
 class SFDCUser(metaclass=Table):
     id: str = field(init=False)
     first_name: str = field(default_factory=fake.first_name)
     last_name: str = field(default_factory=fake.last_name)
     email: str = field(init=False)
     role_id: str = field(default_factory=fake.sfdc_role_id)
+    created_date: datetime = field(init=False)
 
     def __post_init__(self):
         self.id = SFDCUser.unique("sfdc_user_id", fake.sfdc_user_id)
         self.email = f"{self.first_name}.{self.last_name}@vidly.com"
+        self.created_date = fake.date_time_between_dates(
+            start=datetime(year=2015, month=1, day=1), end=datetime.today()
+        )
+    
+    def after_first_run(self):
+        if not self.created_date:
+            self.created_date = fake.date_time_between_dates(
+                start=datetime(year=2015, month=1, day=1), end=datetime.today()
+            )
 
 
 @dataclass
@@ -147,10 +158,10 @@ class Account(metaclass=Table):
         # self.opportunities = []
         self.opportunities = [
             Opportunity(
-                account=self,
-                opened_date=fake.date_time_between_dates(
+                opened_on=fake.date_time_between_dates(
                     start=self.created_date, end=datetime.today()
                 ),
+                account=self,
             )
             for i in range(fake.poisson(3))
         ]
@@ -161,8 +172,8 @@ class Account(metaclass=Table):
         )  # 1 opportunity per account on average, each ETL instance
         self.opportunities += [
             Opportunity(
+                opened_on=fake.date_time_this_quarter(before_today=True),
                 account=self,
-                opened_date=fake.date_time_this_quarter(before_today=True),
             )
             for i in range(poisson_result)
         ]
@@ -177,28 +188,28 @@ class Opportunity(metaclass=Table):
     account_id: str = field(init=False)
     owner_id: str = field(init=False)
     opened_date: date = field(
-        default_factory=fake.date_time_recent, metadata={"dateformat": DATE_FORMAT}
+        init=False, metadata={"dateformat": DATE_FORMAT}
     )
     closed_date: date = field(init=False, metadata={"dateformat": DATE_FORMAT})
     name: str = field(init=False)
     status: str = field(init=False)
     stage_name: str = field(init=False)
     forecast_category: str = field(init=False)
+    opened_on: InitVar[date] = None
     account: InitVar[Account] = None
-    opened_date: InitVar[date] = None
 
-    def __post_init__(self, opened_date: date, account: Account):
+    def __post_init__(self, opened_on: date, account: Account):
         if account:
             self.id = Opportunity.unique("id", fake.sfdc_opportunity_id)
             self.owner_id = SFDCUser.pick_existing(
                 "id", filter_func=lambda x: x.role_id.endswith("09yOipW000000")
             )
-            if not self.opened_date:
+            if opened_on:
+                self.opened_date = opened_on
+            else:
                 self.opened_date = fake.date_time_between_dates(
                     start=account.created_date, end=datetime.today()
                 )
-            else:
-                self.opened_date = opened_date
 
             self.account = account
             self.account_id = account.id
@@ -243,9 +254,9 @@ if __name__ == "__main__":
     ...
     # Should be generated in the correct DAG order:
     # step 1: ensure Opportunity.id is set to field(init=False)
-    # SFDCUser.generate(count=fake.poisson(10), load_existing=True)
-    # Account.generate(count=fake.poisson(15), load_existing=True)
-    # Contact.generate(count=fake.poisson(20), load_existing=True)
+    # SFDCUser.generate(count=fake.poisson(5), load_existing=True)
+    # Account.generate(count=fake.poisson(10), load_existing=True)
+    # Contact.generate(count=fake.poisson(23), load_existing=True)
     ###
     # Table.writeall()
     Table.pushall()
