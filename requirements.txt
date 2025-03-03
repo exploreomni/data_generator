@@ -3,7 +3,7 @@ cachetools==5.3.0
 certifi==2022.12.7
 cffi==1.15.1
 charset-normalizer==2.1.1
-cryptography==39.0.1
+cryptography==44.0.1
 dataclass-csv==1.4.0
 Faker==17.0.0
 filelock==3.9.0
