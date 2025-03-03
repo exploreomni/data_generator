@@ -44,4 +44,4 @@ snowflake-connector-python==3.0.0
 snowflake-sqlalchemy==1.4.6
 SQLAlchemy==1.4.46
 typing_extensions==4.5.0
-urllib3==1.26.14
+urllib3==1.26.19
