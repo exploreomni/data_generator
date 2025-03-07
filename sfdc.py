@@ -185,6 +185,7 @@ class Opportunity(metaclass=Table):
     # id: str = field(init=False) #### THIS IS NEEDED FOR SFDC, UNCOMMENT ME
     id: str = field(default=None)  #### This is needed for vidly core, uncomment me
     value: int = field(default_factory=fake.random_int)
+    # value: int = field(init=False)
     account_id: str = field(init=False)
     owner_id: str = field(init=False)
     opened_date: date = field(
@@ -257,6 +258,6 @@ if __name__ == "__main__":
     # SFDCUser.generate(count=fake.poisson(5), load_existing=True)
     # Account.generate(count=fake.poisson(10), load_existing=True)
     # Contact.generate(count=fake.poisson(23), load_existing=True)
-    ###
+    # ###
     # Table.writeall()
-    Table.pushall()
+    # Table.pushall()
