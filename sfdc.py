@@ -15,8 +15,6 @@ from dotenv import load_dotenv
 load_dotenv()
 import os
 
-print("Running latest version of sfdc.py")
-
 DATE_FORMAT = os.environ.get("DATEFORMAT", "%Y-%m-%d")
 
 fake = Faker()
@@ -254,6 +252,11 @@ class Opportunity(metaclass=Table):
                     Account.pick_existing("id", id=self.account_id).status = "Customer"
                 self.closed_date = fake.date_time_this_quarter(before_today=True)
 
+
+print("SFDCUser instances:", len(SFDCUser.instances))
+print("Account instances:", len(Account.instances))
+print("Contact instances:", len(Contact.instances))
+print("Opportunity instances:", len(Opportunity.instances))
 
 if __name__ == "__main__":
     ...
