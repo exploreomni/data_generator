@@ -275,6 +275,39 @@ class Opportunity(metaclass=Table):
             if self.stage_name == "Closed Won":
                 Account.pick_existing("id", id=self.account_id).status = "Customer"
 
+        #### Alternative after_first_run code to have more of a logical pipeline progression. I don't know if this is actually necessary - probably need to think about how we're going to be interacting with this and what the view on top of it will look like
+        # if self.status == "Open":
+        # # Define the open stages in sequential order.
+        # pipeline_order = [
+        #     "Prospecting",
+        #     "Qualification",
+        #     "Needs Analysis",
+        #     "Value Proposition",
+        #     "Negotiation/Review"
+        # ]
+        # days_open = (datetime.today() - self.opened_date).days
+
+        # # If current stage is in the pipeline, try progressing to the next stage.
+        # if self.stage_name in pipeline_order:
+        #     current_index = pipeline_order.index(self.stage_name)
+        #     # If not at the last open stage, attempt to move to the next one.
+        #     if current_index < len(pipeline_order) - 1:
+        #         # For opportunities open less than 30 days, keep a low chance; then increase 1% per day beyond 30.
+        #         progression_probability = min(0.2 + 0.01 * max(0, days_open - 30), 0.8)
+        #         if fake.probability(progression_probability):
+        #             self.stage_name = pipeline_order[current_index + 1]
+        # # If the opportunity is in the final open stage ("Negotiation/Review"), simulate closing.
+        # if self.stage_name == "Negotiation/Review":
+        #     closing_probability = min(0.2 + 0.01 * max(0, days_open - 30), 0.95)
+        #     if fake.probability(closing_probability):
+        #         self.stage_name = fake.random_element(elements=("Closed Won", "Closed Lost"))
+        #         self.status = "Closed"
+        #         delay = timedelta(days=random.randint(60, 90))
+        #         self.closed_date = self.opened_date + delay
+        #         self.forecast_category = "Closed"
+        #         if self.stage_name == "Closed Won":
+        #             Account.pick_existing("id", id=self.account_id).status = "Customer"
+
 
 
 if __name__ == "__main__":
