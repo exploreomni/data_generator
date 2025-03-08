@@ -219,39 +219,39 @@ class Opportunity(metaclass=Table):
             opword = random.choice(OPWORDS)
             opword = f"{opword} {self.opened_date.year}/{self.opened_date.month}"
             self.name = f"{account.name} {opword}"
-            self.status = fake.random_element(elements=("Open", "Closed"))
-            self.stage_name = fake.random_element(
-                elements=(
-                    "Qualify",
-                    "Develop",
-                    "Develop Postive",
-                    "Closed Won",
-                    "Closed Lost",
-                )
-            )
-            if self.stage_name.startswith("Closed"):
+            # Choose a realistic sales stage
+            self.stage_name = fake.random_element(elements=(
+                "Prospecting",
+                "Qualification",
+                "Needs Analysis",
+                "Value Proposition",
+                "Negotiation/Review",
+                "Closed Won",
+                "Closed Lost",
+            ))
+            # Set status based on stage_name
+            if self.stage_name in ("Closed Won", "Closed Lost"):
+                self.status = "Closed"
                 self.closed_date = fake.date_time_between_dates(
                     start=self.opened_date, end=datetime.today()
                 )
-                self.forecast_category = self.stage_name
-                self.status = "Closed"
+                self.forecast_category = "Closed"
                 if self.stage_name == "Closed Won":
                     account.status = "Customer"
             else:
-                self.forecast_category = "Pipeline"
+                self.status = "Open"
                 self.closed_date = None
+                self.forecast_category = "Pipeline"
 
     def after_first_run(self):
-        if self.status == "Open":
-            if fake.probability(0.5):
-                self.status = "Closed"
-                self.stage_name = fake.random_element(
-                    elements=("Closed Won", "Closed Lost")
-                )
-                if self.stage_name == "Closed Won":
-                    self.forecast_category = "Closed"
-                    Account.pick_existing("id", id=self.account_id).status = "Customer"
-                self.closed_date = fake.date_time_this_quarter(before_today=True)
+         # Simulate a progression: a 30% chance for an open opportunity to close in a cycle.
+        if self.status == "Open" and fake.probability(0.3):
+            self.stage_name = fake.random_element(elements=("Closed Won", "Closed Lost"))
+            self.status = "Closed"
+            self.closed_date = fake.date_time_this_quarter(before_today=True)
+            self.forecast_category = "Closed"
+            if self.stage_name == "Closed Won":
+                Account.pick_existing("id", id=self.account_id).status = "Customer"
 
 
 
@@ -262,11 +262,6 @@ if __name__ == "__main__":
     SFDCUser.generate(count=fake.poisson(5), load_existing=True)
     Account.generate(count=fake.poisson(10), load_existing=True)
     Contact.generate(count=fake.poisson(23), load_existing=True)
-
-    print("SFDCUser instances:", len(SFDCUser.instances))
-    print("Account instances:", len(Account.instances))
-    print("Contact instances:", len(Contact.instances))
-    print("Opportunity instances:", len(Opportunity.instances))
     # ###
     Table.writeall()
     # Table.pushall()
