@@ -1,3 +1,4 @@
+
 import itertools
 from dataclasses import dataclass, field, InitVar
 from faker import Faker
@@ -14,7 +15,9 @@ from dotenv import load_dotenv
 load_dotenv()
 import os
 
-DATE_FORMAT = os.environ["DATEFORMAT"]
+print("Running latest version of sfdc.py")
+
+DATE_FORMAT = os.environ.get("DATEFORMAT", "%Y-%m-%d")
 
 fake = Faker()
 fake.add_provider(sfdc.sfdc_ids)
@@ -27,7 +30,8 @@ OPWORDS = [
     "ad spend",
     "sales team",
     "r&d",
-    "Taget Demo" "corporate marketing",
+    "Target Demo",
+    "corporate marketing",
     "product marketing",
     "ad buy",
     "Digital ad buy",
@@ -259,5 +263,5 @@ if __name__ == "__main__":
     # Account.generate(count=fake.poisson(10), load_existing=True)
     # Contact.generate(count=fake.poisson(23), load_existing=True)
     # ###
-    # Table.writeall()
+    Table.writeall()
     # Table.pushall()
