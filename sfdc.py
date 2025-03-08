@@ -180,14 +180,16 @@ class Account(metaclass=Table):
             for i in range(poisson_result)
         ]
 
+def generate_opportunity_value():
+    # Returns a random number between 30,000 and 100,000 in increments of 1,000
+    return random.randrange(30000, 100000, 1000)
 
 @dataclass
 @dateformat(DATE_FORMAT)
 class Opportunity(metaclass=Table):
     # id: str = field(init=False) #### THIS IS NEEDED FOR SFDC, UNCOMMENT ME
     id: str = field(default=None)  #### This is needed for vidly core, uncomment me
-    value: int = field(default_factory=fake.random_int)
-    # value: int = field(init=False)
+    value: int = field(default_factory=generate_opportunity_value)
     account_id: str = field(init=False)
     owner_id: str = field(init=False)
     opened_date: date = field(
