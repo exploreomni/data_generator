@@ -234,6 +234,7 @@ class Opportunity(metaclass=Table):
                     start=self.opened_date, end=datetime.today()
                 )
                 self.forecast_category = self.stage_name
+                self.status = "Closed"
                 if self.stage_name == "Closed Won":
                     account.status = "Customer"
             else:
