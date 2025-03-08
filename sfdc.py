@@ -253,18 +253,19 @@ class Opportunity(metaclass=Table):
                 self.closed_date = fake.date_time_this_quarter(before_today=True)
 
 
-print("SFDCUser instances:", len(SFDCUser.instances))
-print("Account instances:", len(Account.instances))
-print("Contact instances:", len(Contact.instances))
-print("Opportunity instances:", len(Opportunity.instances))
 
 if __name__ == "__main__":
     ...
     # Should be generated in the correct DAG order:
     # step 1: ensure Opportunity.id is set to field(init=False)
-    # SFDCUser.generate(count=fake.poisson(5), load_existing=True)
-    # Account.generate(count=fake.poisson(10), load_existing=True)
-    # Contact.generate(count=fake.poisson(23), load_existing=True)
+    SFDCUser.generate(count=fake.poisson(5), load_existing=True)
+    Account.generate(count=fake.poisson(10), load_existing=True)
+    Contact.generate(count=fake.poisson(23), load_existing=True)
+
+    print("SFDCUser instances:", len(SFDCUser.instances))
+    print("Account instances:", len(Account.instances))
+    print("Contact instances:", len(Contact.instances))
+    print("Opportunity instances:", len(Opportunity.instances))
     # ###
     Table.writeall()
     # Table.pushall()
