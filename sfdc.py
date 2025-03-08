@@ -8,7 +8,7 @@ from dataclass_csv import dateformat
 from lib.providers import companies, dates, probability, sfdc
 from lib.table import Table
 from lib import helpers
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import random
 from dotenv import load_dotenv
 
@@ -83,13 +83,13 @@ class SFDCUser(metaclass=Table):
         self.id = SFDCUser.unique("sfdc_user_id", fake.sfdc_user_id)
         self.email = f"{self.first_name}.{self.last_name}@vidly.com"
         self.created_date = fake.date_time_between_dates(
-            start=datetime(year=2015, month=1, day=1), end=datetime.today()
+            start=datetime(year=2023, month=1, day=1), end=datetime.today()
         )
     
     def after_first_run(self):
         if not self.created_date:
             self.created_date = fake.date_time_between_dates(
-                start=datetime(year=2015, month=1, day=1), end=datetime.today()
+                start=datetime(year=2023, month=1, day=1), end=datetime.today()
             )
 
 
@@ -149,7 +149,7 @@ class Account(metaclass=Table):
         self.id = Account.unique("sfdc_account_id", fake.sfdc_account_id)
         self.owner_id = SFDCUser.pick_existing("id")
         self.created_date = fake.date_time_between_dates(
-            start=datetime(year=2015, month=1, day=1), end=datetime.today()
+            start=datetime(year=2023, month=1, day=1), end=datetime.today()
         )
         if self.employees_c < 100:
             self.segment = "SMB"
@@ -181,8 +181,9 @@ class Account(metaclass=Table):
         ]
 
 def generate_opportunity_value():
-    # Returns a random number between 30,000 and 100,000 in increments of 1,000
-    return random.randrange(30000, 100000, 1000)
+    # Use a triangular distribution with min=30k, max=100k, mode=50k
+    value = random.triangular(30000, 100000, 50000)
+    return int(round(value / 1000)) * 1000
 
 @dataclass
 @dateformat(DATE_FORMAT)
@@ -243,9 +244,11 @@ class Opportunity(metaclass=Table):
             # Set status based on stage_name
             if self.stage_name in ("Closed Won", "Closed Lost"):
                 self.status = "Closed"
-                self.closed_date = fake.date_time_between_dates(
-                    start=self.opened_date, end=datetime.today()
-                )
+                delay = timedelta(days=random.randint(30, 90))
+                self.closed_date = self.opened_date + delay
+                # self.closed_date = fake.date_time_between_dates(
+                #     start=self.opened_date, end=datetime.today()
+                # )
                 self.forecast_category = "Closed"
                 if self.stage_name == "Closed Won":
                     account.status = "Customer"
@@ -255,11 +258,19 @@ class Opportunity(metaclass=Table):
                 self.forecast_category = "Pipeline"
 
     def after_first_run(self):
-         # Simulate a progression: a 30% chance for an open opportunity to close in a cycle.
-        if self.status == "Open" and fake.probability(0.3):
+         # Simulate progression: increase chance to close as the opportunity stays open longer.
+        if self.status == "Open":
+            days_open = (datetime.today() - self.opened_date).days
+        if days_open < 30:
+            probability = 0.2  # 20% chance if less than 30 days open
+        else:
+            probability = min(0.2 + 0.01 * (days_open - 30), 0.95)
+        if fake.probability(probability):
+            # Transition to a closed stage
             self.stage_name = fake.random_element(elements=("Closed Won", "Closed Lost"))
             self.status = "Closed"
-            self.closed_date = fake.date_time_this_quarter(before_today=True)
+            delay = timedelta(days=random.randint(60, 90))
+            self.closed_date = self.opened_date + delay
             self.forecast_category = "Closed"
             if self.stage_name == "Closed Won":
                 Account.pick_existing("id", id=self.account_id).status = "Customer"
