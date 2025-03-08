@@ -206,9 +206,18 @@ class Opportunity(metaclass=Table):
     def __post_init__(self, opened_on: date, account: Account):
         if account:
             self.id = Opportunity.unique("id", fake.sfdc_opportunity_id)
-            self.owner_id = SFDCUser.pick_existing(
-                "id", filter_func=lambda x: x.role_id.endswith("09yOipW000000")
-            )
+            eligible_users = [u for u in SFDCUser.instances if u.role_id.endswith("09yOipW000000")]
+            if eligible_users:
+                # Count the number of opportunities already assigned to each eligible user
+                counts = {u.id: 0 for u in eligible_users}
+                for opp in Opportunity.instances:
+                    if opp.owner_id in counts:
+                        counts[opp.owner_id] += 1
+                # Select the user with the fewest assigned opportunities
+                selected_user = min(eligible_users, key=lambda u: counts[u.id])
+                self.owner_id = selected_user.id
+            else:
+                self.owner_id = None
             if opened_on:
                 self.opened_date = opened_on
             else:
