@@ -25,7 +25,7 @@ class MixedCompanyProvider(BaseProvider):
             "COUNTY": self.generator.city(),  # or add a custom county function
             "EMPLOYEES": employees,
             "REVENUES": revenue,
-            "WEBSITE": self.generator.domain_name(),
+            "WEBSITE": "https://" + self.generator.domain_name(),
             "CATEGORY": category,
         }
 
