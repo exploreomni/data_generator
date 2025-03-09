@@ -5,7 +5,7 @@ from faker import Faker
 class MixedCompanyProvider(BaseProvider):
     def mixed_company(self):
         # Randomly decide on a category.
-        category = random.choice(["SMB", "Corporate", "Enterprise"])
+        category = random.choice(["SMB", "MM", "Enterprise"])
         if category == "Enterprise":
             # Use the Fortune 500 generator for Enterprise companies.
             company_data = self.generator.fortune500Company()
