@@ -2,6 +2,33 @@ import random
 from faker.providers import BaseProvider
 from faker import Faker
 
+class MixedCompanyProvider(BaseProvider):
+    def mixed_company(self):
+        # Randomly pick a category
+        category = random.choice(["SMB", "MM", "Enterprise"])
+        if category == "SMB":
+            employees = random.randint(10, 100)
+            revenue = random.randint(100000, 1000000)
+        elif category == "MM":
+            employees = random.randint(100, 1000)
+            revenue = random.randint(1000000, 10000000)
+        else:  # Enterprise
+            employees = random.randint(1000, 50000)
+            revenue = random.randint(10000000, 100000000)
+        return {
+            "NAME": self.generator.company(),
+            "ADDRESS": self.generator.street_address(),
+            "ADDRESS2": "",
+            "CITY": self.generator.city(),
+            "STATE": self.generator.state_abbr(),
+            "ZIP": self.generator.zipcode(),
+            "COUNTY": self.generator.city(),  # or add a custom county function
+            "EMPLOYEES": employees,
+            "REVENUES": revenue,
+            "WEBSITE": self.generator.domain_name(),
+            "CATEGORY": category,
+        }
+
 class fortune500(BaseProvider):
     call_counter = 0
     def fortune500Company(self) -> dict:

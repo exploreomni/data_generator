@@ -3,6 +3,7 @@ import itertools
 from dataclasses import dataclass, field, InitVar
 from faker import Faker
 from dataclass_csv import dateformat
+from lib.providers.mixed_company import MixedCompanyProvider
 
 # from lib.providers import fortune500, sfdc_ids, dates, probability
 from lib.providers import companies, dates, probability, sfdc
@@ -19,9 +20,10 @@ DATE_FORMAT = os.environ.get("DATEFORMAT", "%Y-%m-%d")
 
 fake = Faker()
 fake.add_provider(sfdc.sfdc_ids)
-fake.add_provider(companies.fortune500)
+# fake.add_provider(companies.fortune500)
 fake.add_provider(dates.dates)
 fake.add_provider(probability.probability)
+fake.add_provider(MixedCompanyProvider)
 
 OPWORDS = [
     "marketing team",
@@ -133,9 +135,8 @@ class Account(metaclass=Table):
     def __post_init__(self):
         # hash_key is the key to use to check for uniqueness on an unhashable type, such as a dict
         self.status = "Prospect"
-        self.__company__ = Account.unique(
-            "__company__", fake.fortune500Company, hash_key="NAME"
-        )
+        # Use the new mixed_company provider instead of fortune500Company
+        self.__company__ = Account.unique("__company__", fake.mixed_company, hash_key="NAME")
         self.name = self.__company__["NAME"]
         self.billing_address = self.__company__["ADDRESS"]
         self.billing_address2 = self.__company__["ADDRESS2"]
@@ -151,10 +152,11 @@ class Account(metaclass=Table):
         self.created_date = fake.date_time_between_dates(
             start=datetime(year=2023, month=1, day=1), end=datetime.today()
         )
-        if self.employees_c < 100:
+        # Set segment based on the provided category from mixed_company.
+        if self.__company__["CATEGORY"] == "SMB":
             self.segment = "SMB"
-        elif self.employees_c < 1000:
-            self.segment = "Corporate"
+        elif self.__company__["CATEGORY"] == "MM":
+            self.segment = "MM"
         else:
             self.segment = "Enterprise"
         # self.opportunities = []
