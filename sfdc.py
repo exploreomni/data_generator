@@ -19,7 +19,7 @@ DATE_FORMAT = os.environ.get("DATEFORMAT", "%Y-%m-%d")
 
 fake = Faker()
 fake.add_provider(sfdc.sfdc_ids)
-# fake.add_provider(companies.fortune500)
+fake.add_provider(companies.fortune500)
 fake.add_provider(dates.dates)
 fake.add_provider(probability.probability)
 fake.add_provider(companies.MixedCompanyProvider)
