@@ -3,7 +3,6 @@ import itertools
 from dataclasses import dataclass, field, InitVar
 from faker import Faker
 from dataclass_csv import dateformat
-from lib.providers.mixed_company import MixedCompanyProvider
 
 # from lib.providers import fortune500, sfdc_ids, dates, probability
 from lib.providers import companies, dates, probability, sfdc
@@ -23,7 +22,7 @@ fake.add_provider(sfdc.sfdc_ids)
 # fake.add_provider(companies.fortune500)
 fake.add_provider(dates.dates)
 fake.add_provider(probability.probability)
-fake.add_provider(MixedCompanyProvider)
+fake.add_provider(companies.MixedCompanyProvider)
 
 OPWORDS = [
     "marketing team",
