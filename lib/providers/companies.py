@@ -4,30 +4,37 @@ from faker import Faker
 
 class MixedCompanyProvider(BaseProvider):
     def mixed_company(self):
-        # Randomly pick a category
-        category = random.choice(["SMB", "MM", "Enterprise"])
-        if category == "SMB":
-            employees = random.randint(10, 100)
-            revenue = random.randint(100000, 1000000)
-        elif category == "MM":
-            employees = random.randint(100, 1000)
-            revenue = random.randint(1000000, 10000000)
-        else:  # Enterprise
-            employees = random.randint(1000, 50000)
-            revenue = random.randint(10000000, 100000000)
-        return {
-            "NAME": self.generator.company(),
-            "ADDRESS": self.generator.street_address(),
-            "ADDRESS2": "",
-            "CITY": self.generator.city(),
-            "STATE": self.generator.state_abbr(),
-            "ZIP": self.generator.zipcode(),
-            "COUNTY": self.generator.city(),  # or add a custom county function
-            "EMPLOYEES": employees,
-            "REVENUES": revenue,
-            "WEBSITE": "https://" + self.generator.domain_name(),
-            "CATEGORY": category,
-        }
+        # Randomly decide on a category.
+        category = random.choice(["SMB", "Corporate", "Enterprise"])
+        if category == "Enterprise":
+            # Use the Fortune 500 generator for Enterprise companies.
+            company_data = self.generator.fortune500Company()
+            # Ensure the CATEGORY is set.
+            company_data["CATEGORY"] = category
+            return company_data
+        else:
+            # For SMB and Corporate, create synthetic data.
+            if category == "SMB":
+                employees = random.randint(10, 100)
+                revenue = random.randint(100000, 1000000)
+            else:  # Corporate
+                employees = random.randint(100, 1000)
+                revenue = random.randint(1000000, 10000000)
+            # Create a more realistic company name using Faker.
+            company_name = f"{self.generator.company()} {self.generator.company_suffix()}"
+            return {
+                "NAME": company_name,
+                "ADDRESS": self.generator.street_address(),
+                "ADDRESS2": "",
+                "CITY": self.generator.city(),
+                "STATE": self.generator.state_abbr(),
+                "ZIP": self.generator.zipcode(),
+                "COUNTY": self.generator.city(),  # or use a dedicated county function
+                "EMPLOYEES": employees,
+                "REVENUES": revenue,
+                "WEBSITE": "https://" + self.generator.domain_name(),
+                "CATEGORY": category,
+            }
 
 class fortune500(BaseProvider):
     call_counter = 0
