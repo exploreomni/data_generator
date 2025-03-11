@@ -315,9 +315,9 @@ if __name__ == "__main__":
     ...
     # Should be generated in the correct DAG order:
     # step 1: ensure Opportunity.id is set to field(init=False)
-    SFDCUser.generate(count=fake.poisson(5), load_existing=True)
-    Account.generate(count=fake.poisson(10), load_existing=True)
-    Contact.generate(count=fake.poisson(23), load_existing=True)
+    SFDCUser.generate(count=fake.poisson(10), load_existing=True)
+    Account.generate(count=fake.poisson(1000), load_existing=True)
+    Contact.generate(count=fake.poisson(200), load_existing=True)
     # ###
     Table.writeall()
     # Table.pushall()
