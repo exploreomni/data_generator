@@ -327,10 +327,9 @@ if __name__ == "__main__":
     NUM_ACCOUNTS = 150_000_000
     BATCH_SIZE = 1_000_000
 
-    # Generate SFDC users first to ensure accounts have owners
-    SFDCUser.generate(count=100, load_existing=False)  # adjust user count as needed
+    # Generate SFDC users first and DO NOT clear them immediately
+    SFDCUser.generate(count=100, load_existing=False)  # Adjust user count as needed
     Table.writeall()
-    SFDCUser.instances.clear()
 
     # Initial test with 3 batches
     TEST_BATCHES = 3
@@ -342,6 +341,9 @@ if __name__ == "__main__":
         Table.writeall()
         Account.instances.clear()
         print(f"Batch {batch_num + 1} completed")
+
+    # Clear SFDC users only after ALL account batches are done
+    SFDCUser.instances.clear()
 
     # Uncomment the lines below to generate all 150M rows after testing:
     # NUM_BATCHES = NUM_ACCOUNTS // BATCH_SIZE
