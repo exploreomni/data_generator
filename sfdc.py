@@ -327,7 +327,12 @@ if __name__ == "__main__":
     NUM_ACCOUNTS = 150_000_000
     BATCH_SIZE = 1_000_000
 
-    # Initial test with just 3 batches to verify everything works as expected.
+    # Generate SFDC users first to ensure accounts have owners
+    SFDCUser.generate(count=100, load_existing=False)  # adjust user count as needed
+    Table.writeall()
+    SFDCUser.instances.clear()
+
+    # Initial test with 3 batches
     TEST_BATCHES = 3
     print(f"Starting initial test run: {TEST_BATCHES} batches")
 
