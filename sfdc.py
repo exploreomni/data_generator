@@ -311,45 +311,13 @@ class Opportunity(metaclass=Table):
 
 
 
-# if __name__ == "__main__":
+if __name__ == "__main__":
 #     ...
 #     # Should be generated in the correct DAG order:
 #     # step 1: ensure Opportunity.id is set to field(init=False)
-#     SFDCUser.generate(count=1000000, load_existing=True)
-#     Account.generate(count=150000000, load_existing=True)
-#     Contact.generate(count=150000000, load_existing=True)
+    SFDCUser.generate(count=1000000, load_existing=True)
+    Account.generate(count=150000000, load_existing=True)
+    Contact.generate(count=150000000, load_existing=True)
 #     # ###
-#     Table.writeall()
-#     # Table.pushall()
-
-
-if __name__ == "__main__":
-    NUM_ACCOUNTS = 150_000_000
-    BATCH_SIZE = 1_000_000
-
-    # Generate SFDC users first and DO NOT clear them immediately
-    SFDCUser.generate(count=100, load_existing=False)  # Adjust user count as needed
     Table.writeall()
-
-    # Initial test with 3 batches
-    TEST_BATCHES = 3
-    print(f"Starting initial test run: {TEST_BATCHES} batches")
-
-    for batch_num in range(TEST_BATCHES):
-        print(f"Generating batch {batch_num + 1}/{TEST_BATCHES}")
-        Account.generate(count=BATCH_SIZE, load_existing=False)
-        Table.writeall()
-        Account.instances.clear()
-        print(f"Batch {batch_num + 1} completed")
-
-    # Clear SFDC users only after ALL account batches are done
-    SFDCUser.instances.clear()
-
-    # Uncomment the lines below to generate all 150M rows after testing:
-    # NUM_BATCHES = NUM_ACCOUNTS // BATCH_SIZE
-    # for batch_num in range(NUM_BATCHES):
-    #     print(f"Generating batch {batch_num + 1}/{NUM_BATCHES}")
-    #     Account.generate(count=BATCH_SIZE, load_existing=False)
-    #     Table.writeall()
-    #     Account.instances.clear()
-    #     print(f"Batch {batch_num + 1} completed")
+#     # Table.pushall()
