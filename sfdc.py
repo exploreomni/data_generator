@@ -126,15 +126,27 @@ class Account(metaclass=Table):
     billing_county: str = field(init=False)
     employees_c: int = field(init=False)
     revenue_c: int = field(init=False)
+    industry: str = field(init=False)
     website: str = field(init=False)
     segment: str = field(init=False)
     status: str = field(init=False)
     created_date: datetime = field(init=False)
 
+    INDUSTRIES = [
+        "Technology",
+        "Finance",
+        "Healthcare",
+        "Retail",
+        "Manufacturing",
+        "Media",
+        "Education",
+        "Hospitality",
+        "Real Estate",
+        "Energy",
+    ]
+
     def __post_init__(self):
-        # hash_key is the key to use to check for uniqueness on an unhashable type, such as a dict
         self.status = "Prospect"
-        # Use the new mixed_company provider instead of fortune500Company
         self.__company__ = Account.unique("__company__", fake.mixed_company, hash_key="NAME")
         self.name = self.__company__["NAME"]
         self.billing_address = self.__company__["ADDRESS"]
@@ -151,14 +163,15 @@ class Account(metaclass=Table):
         self.created_date = fake.date_time_between_dates(
             start=datetime(year=2023, month=1, day=1), end=datetime.today()
         )
-        # Set segment based on the provided category from mixed_company.
-        if self.__company__["CATEGORY"] == "SMB":
-            self.segment = "SMB"
-        elif self.__company__["CATEGORY"] == "MM":
-            self.segment = "MM"
-        else:
-            self.segment = "Enterprise"
-        # self.opportunities = []
+
+        # Set segment based on provided category from mixed_company
+        category = self.__company__["CATEGORY"]
+        self.segment = category if category in ("SMB", "MM") else "Enterprise"
+
+        # Assign a random industry
+        self.industry = random.choice(Account.INDUSTRIES)
+
+        # Generate associated opportunities
         self.opportunities = [
             Opportunity(
                 opened_on=fake.date_time_between_dates(
@@ -166,19 +179,17 @@ class Account(metaclass=Table):
                 ),
                 account=self,
             )
-            for i in range(fake.poisson(3))
+            for _ in range(fake.poisson(3))
         ]
 
     def after_first_run(self):
-        poisson_result = fake.poisson(
-            1
-        )  # 1 opportunity per account on average, each ETL instance
+        additional_opps = fake.poisson(1)
         self.opportunities += [
             Opportunity(
                 opened_on=fake.date_time_this_quarter(before_today=True),
                 account=self,
             )
-            for i in range(poisson_result)
+            for _ in range(additional_opps)
         ]
 
 def generate_opportunity_value():
@@ -315,9 +326,9 @@ if __name__ == "__main__":
 #     ...
 #     # Should be generated in the correct DAG order:
 #     # step 1: ensure Opportunity.id is set to field(init=False)
-    SFDCUser.generate(count=1000000, load_existing=True)
-    Account.generate(count=150000000, load_existing=True)
-    Contact.generate(count=150000000, load_existing=True)
+    SFDCUser.generate(count=fake.poisson(10), load_existing=True)
+    Account.generate(count=fake.poisson(1000), load_existing=True)
+    Contact.generate(count=fake.poisson(200), load_existing=True)
 #     # ###
     Table.writeall()
 #     # Table.pushall()
