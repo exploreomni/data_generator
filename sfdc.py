@@ -200,50 +200,51 @@ def generate_opportunity_value():
 @dataclass
 @dateformat(DATE_FORMAT)
 class Opportunity(metaclass=Table):
-    # id: str = field(init=False) #### THIS IS NEEDED FOR SFDC, UNCOMMENT ME
-    id: str = field(default=None)  #### This is needed for vidly core, uncomment me
+    id: str = field(default=None)
     value: int = field(default_factory=generate_opportunity_value)
     account_id: str = field(init=False)
     owner_id: str = field(init=False)
-    opened_date: date = field(
-        init=False, metadata={"dateformat": DATE_FORMAT}
-    )
+    opened_date: date = field(init=False, metadata={"dateformat": DATE_FORMAT})
     closed_date: date = field(init=False, metadata={"dateformat": DATE_FORMAT})
     name: str = field(init=False)
     status: str = field(init=False)
     stage_name: str = field(init=False)
     forecast_category: str = field(init=False)
+    business_type: str = field(init=False)  # New field added here
     opened_on: InitVar[date] = None
     account: InitVar[Account] = None
 
     def __post_init__(self, opened_on: date, account: Account):
         if account:
             self.id = Opportunity.unique("id", fake.sfdc_opportunity_id)
+
+            # Owner assignment logic
             eligible_users = [u for u in SFDCUser.instances if u.role_id.endswith("09yOipW000000")]
             if eligible_users:
-                # Count the number of opportunities already assigned to each eligible user
                 counts = {u.id: 0 for u in eligible_users}
                 for opp in Opportunity.instances:
                     if opp.owner_id in counts:
                         counts[opp.owner_id] += 1
-                # Select the user with the fewest assigned opportunities
                 selected_user = min(eligible_users, key=lambda u: counts[u.id])
                 self.owner_id = selected_user.id
             else:
                 self.owner_id = None
-            if opened_on:
-                self.opened_date = opened_on
-            else:
-                self.opened_date = fake.date_time_between_dates(
-                    start=account.created_date, end=datetime.today()
-                )
 
+            # Set opened_date
+            self.opened_date = opened_on or fake.date_time_between_dates(
+                start=account.created_date, end=datetime.today()
+            )
+
+            # Link to account
             self.account = account
             self.account_id = account.id
+
+            # Opportunity name logic
             opword = random.choice(OPWORDS)
             opword = f"{opword} {self.opened_date.year}/{self.opened_date.month}"
             self.name = f"{account.name} {opword}"
-            # Choose a realistic sales stage
+
+            # Stage and status assignment
             self.stage_name = fake.random_element(elements=(
                 "Prospecting",
                 "Qualification",
@@ -253,14 +254,11 @@ class Opportunity(metaclass=Table):
                 "Closed Won",
                 "Closed Lost",
             ))
-            # Set status based on stage_name
+
             if self.stage_name in ("Closed Won", "Closed Lost"):
                 self.status = "Closed"
                 delay = timedelta(days=random.randint(30, 90))
-                self.closed_date = self.opened_date + delay
-                # self.closed_date = fake.date_time_between_dates(
-                #     start=self.opened_date, end=datetime.today()
-                # )
+                self.closed_date = min(self.opened_date + delay, datetime.today())
                 self.forecast_category = "Closed"
                 if self.stage_name == "Closed Won":
                     account.status = "Customer"
@@ -269,23 +267,33 @@ class Opportunity(metaclass=Table):
                 self.closed_date = None
                 self.forecast_category = "Pipeline"
 
+            # Determine business type explicitly:
+            if account.status == "Customer":
+                # Established customers: mostly Add-On
+                self.business_type = random.choices(
+                    ["Add-On", "New Business"], weights=[0.8, 0.2]
+                )[0]
+            else:
+                # Prospects: mostly New Business
+                self.business_type = random.choices(
+                    ["New Business", "Add-On"], weights=[0.9, 0.1]
+                )[0]
+
     def after_first_run(self):
-         # Simulate progression: increase chance to close as the opportunity stays open longer.
         if self.status == "Open":
             days_open = (datetime.today() - self.opened_date).days
-        if days_open < 30:
-            probability = 0.2  # 20% chance if less than 30 days open
-        else:
-            probability = min(0.2 + 0.01 * (days_open - 30), 0.95)
-        if fake.probability(probability):
-            # Transition to a closed stage
-            self.stage_name = fake.random_element(elements=("Closed Won", "Closed Lost"))
-            self.status = "Closed"
-            delay = timedelta(days=random.randint(60, 90))
-            self.closed_date = self.opened_date + delay
-            self.forecast_category = "Closed"
-            if self.stage_name == "Closed Won":
-                Account.pick_existing("id", id=self.account_id).status = "Customer"
+            probability = min(0.2 + 0.01 * max(days_open - 30, 0), 0.95)
+            
+            if fake.probability(probability):
+                self.stage_name = random.choice(["Closed Won", "Closed Lost"])
+                self.status = "Closed"
+                delay = timedelta(days=random.randint(60, 90))
+                self.closed_date = min(self.opened_date + delay, datetime.today())
+                self.forecast_category = "Closed"
+                
+                if self.stage_name == "Closed Won":
+                    account = Account.pick_existing("id", id=self.account_id)
+                    account.status = "Customer"
 
         #### Alternative after_first_run code to have more of a logical pipeline progression. I don't know if this is actually necessary - probably need to think about how we're going to be interacting with this and what the view on top of it will look like
         # if self.status == "Open":
