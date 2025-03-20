@@ -186,7 +186,9 @@ class Account(metaclass=Table):
         additional_opps = fake.poisson(1)
         self.opportunities += [
             Opportunity(
-                opened_on=fake.date_time_this_quarter(before_today=True),
+                opened_on=fake.date_time_between_dates(
+                    start=self.created_date, end=datetime.today()
+                ),
                 account=self,
             )
             for _ in range(additional_opps)
