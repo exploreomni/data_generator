@@ -112,6 +112,13 @@ class Contact(metaclass=Table):
         ...
 
 
+def random_account_created_date():
+    today = datetime.today()
+    start_date = datetime(year=2023, month=1, day=1)
+    # Triangular distribution (bias toward earlier dates)
+    random_days = int(random.triangular(0, (today - start_date).days, 90))
+    return start_date + timedelta(days=random_days)
+
 @dataclass
 @dateformat(DATE_FORMAT)
 class Account(metaclass=Table):
@@ -160,9 +167,7 @@ class Account(metaclass=Table):
         self.website = self.__company__["WEBSITE"].lower()
         self.id = Account.unique("sfdc_account_id", fake.sfdc_account_id)
         self.owner_id = SFDCUser.pick_existing("id")
-        self.created_date = fake.date_time_between_dates(
-            start=datetime(year=2023, month=1, day=1), end=datetime.today()
-        )
+        self.created_date = random_account_created_date()
 
         # Set segment based on provided category from mixed_company
         category = self.__company__["CATEGORY"]
@@ -175,7 +180,8 @@ class Account(metaclass=Table):
         self.opportunities = [
             Opportunity(
                 opened_on=fake.date_time_between_dates(
-                    start=self.created_date, end=datetime.today()
+                    start=self.created_date,
+                    end=min(self.created_date + timedelta(days=random.randint(30, 365)), datetime.today())
                 ),
                 account=self,
             )
