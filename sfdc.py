@@ -272,7 +272,8 @@ class Opportunity(metaclass=Table):
                     account.status = "Customer"
             else:
                 self.status = "Open"
-                self.closed_date = None
+                future_delay = timedelta(days=random.randint(15, 90))
+                self.closed_date = datetime.today() + future_delay
                 self.forecast_category = "Pipeline"
 
             # Determine business type explicitly:
