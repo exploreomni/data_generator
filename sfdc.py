@@ -178,7 +178,6 @@ class Account(metaclass=Table):
         self.revenue_c = self.__company__["REVENUES"]
         self.website = self.__company__["WEBSITE"].lower()
         self.id = Account.unique("sfdc_account_id", fake.sfdc_account_id)
-        self.owner_id = SFDCUser.pick_existing("id")
         self.created_date = random_account_created_date()
 
         # Set segment based on provided category from mixed_company
@@ -201,6 +200,10 @@ class Account(metaclass=Table):
         ]
 
     def after_first_run(self):
+        # Assign owner_id now that users exist
+        if not self.owner_id:
+            self.owner_id = SFDCUser.pick_existing("id")
+        
         additional_opps = fake.poisson(1)
         self.opportunities += [
             Opportunity(
