@@ -69,14 +69,18 @@ OPWORDS = [
     "Male likely propensity",
 ]
 
-@dataclass
-@dateformat(DATE_FORMAT)
-class Product(metaclass=Table):
-    id: str = field(init=False)
-    name: str = field(default_factory=lambda: fake.unique.word().title())
-
-    def __post_init__(self):
-        self.id = Product.unique("product_id", fake.uuid4)
+PRODUCT_NAMES = [
+    "Core Platform",
+    "Data API",
+    "User Analytics",
+    "Admin Dashboard",
+    "Mobile SDK",
+    "Billing Engine",
+    "Customer Portal",
+    "Notification Service",
+    "Reporting Suite",
+    "Authentication Module",
+]
 
 
 @dataclass
@@ -213,8 +217,7 @@ class Account(metaclass=Table):
             self.owner_id = SFDCUser.pick_existing("id")
 
         # Assign products now that Products exist
-        if not self.products:
-            self.products = random.sample(Product.instances, random.randint(1, 10))
+        self.products = random.sample(PRODUCT_NAMES, random.randint(1, 10))
 
 def generate_opportunity_value():
     # Use a triangular distribution with min=30k, max=100k, mode=50k
@@ -350,30 +353,35 @@ def generate_usage(max_days=30):
     while date_cursor <= end_date:
         for user in customer_users:
             account = account_map[user.account_id]
-            for product in account.products:
+            for product_name in account.products:
                 baseline = random.randint(10, 120)
                 noise = random.randint(-5, 5)
                 Usage(
                     account_id=account.id,
                     user_id=user.id,
-                    product_id=product.id,
+                    product_id=product_name,  # product is now just a string
                     usage_date=date_cursor.date(),
                     usage_min=max(1, baseline + noise),
                 )
         date_cursor += timedelta(days=1)
 
 if __name__ == "__main__":
-    Product.generate(count=10, load_existing=True)
+    # Generate Accounts first
     Account.generate(count=fake.poisson(1000), load_existing=True)
 
-    # Finalize Account world
+    # Generate Users now (so owner_id can exist)
+    SFDCUser.generate(count=fake.poisson(10), load_existing=True)
+
+    # Now finalize the Account world
     for account in Account.instances:
         account.after_all_generated()
 
-    SFDCUser.generate(count=fake.poisson(10), load_existing=True)
+    # Generate Contacts
     Contact.generate(count=fake.poisson(200), load_existing=True)
 
+    # Write Dimension tables
     Table.writeall()
 
+    # Generate Usage
     generate_usage(max_days=30)
     Usage.write()
