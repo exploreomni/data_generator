@@ -361,14 +361,17 @@ def generate_usage(max_days=30):
             date_cursor += timedelta(days=1)
 
 if __name__ == "__main__":
+    # Generate dimensions
     Product.generate(count=10, load_existing=True)
     Account.generate(count=fake.poisson(1000), load_existing=True)
-    SFDCUser.generate(count=fake.poisson(10), load_existing=True)
-    Contact.generate(count=fake.poisson(200), load_existing=True)
 
-    # Finalize Accounts
+    # Finalize Account World
     for account in Account.instances:
         account.after_all_generated()
+
+    # Generate Users *after* Accounts are finalized
+    SFDCUser.generate(count=fake.poisson(10), load_existing=True)
+    Contact.generate(count=fake.poisson(200), load_existing=True)
 
     Table.writeall()
 
