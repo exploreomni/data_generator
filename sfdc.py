@@ -152,20 +152,15 @@ class Account(metaclass=Table):
     created_date: datetime = field(init=False)
 
     INDUSTRIES = [
-        "Technology",
-        "Finance",
-        "Healthcare",
-        "Retail",
-        "Manufacturing",
-        "Media",
-        "Education",
-        "Hospitality",
-        "Real Estate",
-        "Energy",
+        "Technology", "Finance", "Healthcare", "Retail", "Manufacturing",
+        "Media", "Education", "Hospitality", "Real Estate", "Energy",
     ]
 
     def __post_init__(self):
         self.status = "Prospect"
+        self.owner_id = None  # Delay until after_all_generated()
+        self.products = []    # Delay until after_all_generated()
+
         self.__company__ = Account.unique("__company__", fake.mixed_company, hash_key="NAME")
         self.name = self.__company__["NAME"]
         self.billing_address = self.__company__["ADDRESS"]
@@ -178,18 +173,16 @@ class Account(metaclass=Table):
         self.revenue_c = self.__company__["REVENUES"]
         self.website = self.__company__["WEBSITE"].lower()
         self.id = Account.unique("sfdc_account_id", fake.sfdc_account_id)
-        self.owner_id = None
         self.created_date = random_account_created_date()
-        self.products = []
 
-        # Set segment based on provided category from mixed_company
+        # Set segment
         category = self.__company__["CATEGORY"]
         self.segment = category if category in ("SMB", "MM") else "Enterprise"
 
-        # Assign a random industry
+        # Assign industry
         self.industry = random.choice(Account.INDUSTRIES)
 
-        # Generate associated opportunities
+        # Generate initial Opportunities
         self.opportunities = [
             Opportunity(
                 opened_on=fake.date_time_between_dates(
@@ -202,10 +195,7 @@ class Account(metaclass=Table):
         ]
 
     def after_first_run(self):
-        # Assign owner_id now that users exist
-        if not self.owner_id and SFDCUser.instances:
-            self.owner_id = SFDCUser.pick_existing("id")
-        
+        # Generate extra Opps (local logic only)
         additional_opps = fake.poisson(1)
         self.opportunities += [
             Opportunity(
@@ -217,6 +207,12 @@ class Account(metaclass=Table):
             for _ in range(additional_opps)
         ]
 
+    def after_all_generated(self):
+        # Assign owner_id now that Users exist
+        if not self.owner_id and SFDCUser.instances:
+            self.owner_id = SFDCUser.pick_existing("id")
+
+        # Assign products now that Products exist
         if not self.products:
             self.products = random.sample(Product.instances, random.randint(1, 10))
 
@@ -365,13 +361,16 @@ def generate_usage(max_days=30):
             date_cursor += timedelta(days=1)
 
 if __name__ == "__main__":
-#     ...
-#     # Should be generated in the correct DAG order:
-#     # step 1: ensure Opportunity.id is set to field(init=False)
     Product.generate(count=10, load_existing=True)
-    
     Account.generate(count=fake.poisson(1000), load_existing=True)
     SFDCUser.generate(count=fake.poisson(10), load_existing=True)
     Contact.generate(count=fake.poisson(200), load_existing=True)
-    generate_usage(max_days=30)
+
+    # Finalize Accounts
+    for account in Account.instances:
+        account.after_all_generated()
+
     Table.writeall()
+
+    generate_usage(max_days=30)
+    Usage.write()
