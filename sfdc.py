@@ -180,6 +180,7 @@ class Account(metaclass=Table):
         self.id = Account.unique("sfdc_account_id", fake.sfdc_account_id)
         self.owner_id = None
         self.created_date = random_account_created_date()
+        self.products = []
 
         # Set segment based on provided category from mixed_company
         category = self.__company__["CATEGORY"]
