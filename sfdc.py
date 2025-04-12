@@ -202,7 +202,7 @@ class Account(metaclass=Table):
 
     def after_first_run(self):
         # Assign owner_id now that users exist
-        if not self.owner_id:
+        if not self.owner_id and SFDCUser.instances:
             self.owner_id = SFDCUser.pick_existing("id")
         
         additional_opps = fake.poisson(1)
