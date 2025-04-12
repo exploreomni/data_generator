@@ -69,6 +69,15 @@ OPWORDS = [
     "Male likely propensity",
 ]
 
+@dataclass
+@dateformat(DATE_FORMAT)
+class Product(metaclass=Table):
+    id: str = field(init=False)
+    name: str = field(default_factory=lambda: fake.unique.word().title())
+
+    def __post_init__(self):
+        self.id = Product.unique("product_id", fake.uuid4)
+
 
 @dataclass
 @dateformat(DATE_FORMAT)
@@ -79,8 +88,11 @@ class SFDCUser(metaclass=Table):
     email: str = field(init=False)
     role_id: str = field(default_factory=fake.sfdc_role_id)
     created_date: datetime = field(init=False)
+    account_id: str = field(init=False)
 
     def __post_init__(self):
+        account = Account.pick_existing_object()
+        self.account_id = account.id
         self.id = SFDCUser.unique("sfdc_user_id", fake.sfdc_user_id)
         self.email = f"{self.first_name}.{self.last_name}@vidly.com"
         self.created_date = fake.date_time_between_dates(
@@ -200,6 +212,9 @@ class Account(metaclass=Table):
             for _ in range(additional_opps)
         ]
 
+        if not self.products:
+            self.products = random.sample(Product.instances, random.randint(1, 10))
+
 def generate_opportunity_value():
     # Use a triangular distribution with min=30k, max=100k, mode=50k
     value = random.triangular(30000, 100000, 50000)
@@ -304,48 +319,48 @@ class Opportunity(metaclass=Table):
                     account = Account.pick_existing("id", id=self.account_id)
                     account.status = "Customer"
 
-        #### Alternative after_first_run code to have more of a logical pipeline progression. I don't know if this is actually necessary - probably need to think about how we're going to be interacting with this and what the view on top of it will look like
-        # if self.status == "Open":
-        # # Define the open stages in sequential order.
-        # pipeline_order = [
-        #     "Prospecting",
-        #     "Qualification",
-        #     "Needs Analysis",
-        #     "Value Proposition",
-        #     "Negotiation/Review"
-        # ]
-        # days_open = (datetime.today() - self.opened_date).days
+@dataclass
+@dateformat(DATE_FORMAT)
+class Usage(metaclass=Table):
+    id: str = field(init=False)
+    account_id: str
+    user_id: str
+    product_id: str
+    usage_date: date
+    usage_min: int
 
-        # # If current stage is in the pipeline, try progressing to the next stage.
-        # if self.stage_name in pipeline_order:
-        #     current_index = pipeline_order.index(self.stage_name)
-        #     # If not at the last open stage, attempt to move to the next one.
-        #     if current_index < len(pipeline_order) - 1:
-        #         # For opportunities open less than 30 days, keep a low chance; then increase 1% per day beyond 30.
-        #         progression_probability = min(0.2 + 0.01 * max(0, days_open - 30), 0.8)
-        #         if fake.probability(progression_probability):
-        #             self.stage_name = pipeline_order[current_index + 1]
-        # # If the opportunity is in the final open stage ("Negotiation/Review"), simulate closing.
-        # if self.stage_name == "Negotiation/Review":
-        #     closing_probability = min(0.2 + 0.01 * max(0, days_open - 30), 0.95)
-        #     if fake.probability(closing_probability):
-        #         self.stage_name = fake.random_element(elements=("Closed Won", "Closed Lost"))
-        #         self.status = "Closed"
-        #         delay = timedelta(days=random.randint(60, 90))
-        #         self.closed_date = self.opened_date + delay
-        #         self.forecast_category = "Closed"
-        #         if self.stage_name == "Closed Won":
-        #             Account.pick_existing("id", id=self.account_id).status = "Customer"
+    def __post_init__(self):
+        self.id = Usage.unique("usage_id", fake.uuid4)
 
+def generate_usage():
+    start_date = datetime(year=2023, month=1, day=1)
+    end_date = datetime.today()
 
+    for account in Account.instances:
+        account_users = [u for u in SFDCUser.instances if u.account_id == account.id]
+
+        date_cursor = start_date
+        while date_cursor <= end_date:
+            for user in account_users:
+                for product in account.products:
+                    baseline = random.randint(10, 120)
+                    noise = random.randint(-5, 5)
+                    Usage(
+                        account_id=account.id,
+                        user_id=user.id,
+                        product_id=product.id,
+                        usage_date=date_cursor.date(),
+                        usage_min=max(1, baseline + noise),
+                    )
+            date_cursor += timedelta(days=1)
 
 if __name__ == "__main__":
 #     ...
 #     # Should be generated in the correct DAG order:
 #     # step 1: ensure Opportunity.id is set to field(init=False)
+    Product.generate(count=10, load_existing=True)
     SFDCUser.generate(count=fake.poisson(10), load_existing=True)
     Account.generate(count=fake.poisson(1000), load_existing=True)
     Contact.generate(count=fake.poisson(200), load_existing=True)
-#     # ###
+    generate_usage()
     Table.writeall()
-#     # Table.pushall()
