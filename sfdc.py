@@ -332,14 +332,19 @@ class Usage(metaclass=Table):
     def __post_init__(self):
         self.id = Usage.unique("usage_id", fake.uuid4)
 
-def generate_usage():
+def generate_usage(max_days=30):
     start_date = datetime(year=2023, month=1, day=1)
     end_date = datetime.today()
 
+    # Only generate for recent days to control volume
+    date_cursor = max(end_date - timedelta(days=max_days), start_date)
+
     for account in Account.instances:
+        if account.status != "Customer":
+            continue  # Skip prospects / non-customers
+
         account_users = [u for u in SFDCUser.instances if u.account_id == account.id]
 
-        date_cursor = start_date
         while date_cursor <= end_date:
             for user in account_users:
                 for product in account.products:
@@ -362,5 +367,5 @@ if __name__ == "__main__":
     Account.generate(count=fake.poisson(1000), load_existing=True)
     SFDCUser.generate(count=fake.poisson(10), load_existing=True)
     Contact.generate(count=fake.poisson(200), load_existing=True)
-    generate_usage()
+    generate_usage(max_days=30)
     Table.writeall()
