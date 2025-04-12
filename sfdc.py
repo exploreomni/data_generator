@@ -336,40 +336,40 @@ class Usage(metaclass=Table):
 def generate_usage(max_days=30):
     start_date = datetime(year=2023, month=1, day=1)
     end_date = datetime.today()
-
-    # Only generate for recent days to control volume
     date_cursor = max(end_date - timedelta(days=max_days), start_date)
 
-    for account in Account.instances:
-        if account.status != "Customer":
-            continue  # Skip prospects / non-customers
+    # Map of account_id to account object (faster lookups)
+    account_map = {a.id: a for a in Account.instances}
 
-        account_users = [u for u in SFDCUser.instances if u.account_id == account.id]
+    # Only generate usage for users tied to Customer Accounts
+    customer_users = [
+        u for u in SFDCUser.instances
+        if u.account_id in account_map and account_map[u.account_id].status == "Customer"
+    ]
 
-        while date_cursor <= end_date:
-            for user in account_users:
-                for product in account.products:
-                    baseline = random.randint(10, 120)
-                    noise = random.randint(-5, 5)
-                    Usage(
-                        account_id=account.id,
-                        user_id=user.id,
-                        product_id=product.id,
-                        usage_date=date_cursor.date(),
-                        usage_min=max(1, baseline + noise),
-                    )
-            date_cursor += timedelta(days=1)
+    while date_cursor <= end_date:
+        for user in customer_users:
+            account = account_map[user.account_id]
+            for product in account.products:
+                baseline = random.randint(10, 120)
+                noise = random.randint(-5, 5)
+                Usage(
+                    account_id=account.id,
+                    user_id=user.id,
+                    product_id=product.id,
+                    usage_date=date_cursor.date(),
+                    usage_min=max(1, baseline + noise),
+                )
+        date_cursor += timedelta(days=1)
 
 if __name__ == "__main__":
-    # Generate dimensions
     Product.generate(count=10, load_existing=True)
     Account.generate(count=fake.poisson(1000), load_existing=True)
 
-    # Finalize Account World
+    # Finalize Account world
     for account in Account.instances:
         account.after_all_generated()
 
-    # Generate Users *after* Accounts are finalized
     SFDCUser.generate(count=fake.poisson(10), load_existing=True)
     Contact.generate(count=fake.poisson(200), load_existing=True)
 
