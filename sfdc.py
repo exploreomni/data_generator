@@ -178,6 +178,7 @@ class Account(metaclass=Table):
         self.revenue_c = self.__company__["REVENUES"]
         self.website = self.__company__["WEBSITE"].lower()
         self.id = Account.unique("sfdc_account_id", fake.sfdc_account_id)
+        self.owner_id = None
         self.created_date = random_account_created_date()
 
         # Set segment based on provided category from mixed_company
