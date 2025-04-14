@@ -336,7 +336,7 @@ class ProductUser(metaclass=Table):
     created_date: datetime = field(init=False)
 
     def __post_init__(self):
-        account = Account.pick_existing("id", id=self.account_id)
+        account = Account.pick_existing("id", self.account_id)
 
         # Create domain from account name
         base = account.name.lower()
