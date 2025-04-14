@@ -392,10 +392,10 @@ def generate_usage(max_days=30, max_rows=1_200_000):
 
 if __name__ == "__main__":
     # Generate Accounts
-    Account.generate(count=fake.poisson(1000), load_existing=True)
+    Account.generate(count=fake.poisson(1000))
 
     # Generate Internal Users (30 AEs)
-    SFDCUser.generate(count=30, load_existing=True)
+    SFDCUser.generate(count=30)
 
     # Finalize Accounts (assign owner_id + products)
     for account in Account.instances:
