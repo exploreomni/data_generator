@@ -83,6 +83,8 @@ PRODUCT_NAMES = [
 ]
 
 
+REGIONS = ["West", "East", "Central"]
+
 @dataclass
 @dateformat(DATE_FORMAT)
 class SFDCUser(metaclass=Table):
@@ -90,6 +92,7 @@ class SFDCUser(metaclass=Table):
     first_name: str = field(default_factory=fake.first_name)
     last_name: str = field(default_factory=fake.last_name)
     email: str = field(init=False)
+    region: str = field(init=False)
     role_id: str = field(default_factory=fake.sfdc_role_id)
     created_date: datetime = field(init=False)
     account_id: str = field(init=False)
@@ -99,6 +102,7 @@ class SFDCUser(metaclass=Table):
         self.account_id = account.id
         self.id = SFDCUser.unique("sfdc_user_id", fake.sfdc_user_id)
         self.email = f"{self.first_name}.{self.last_name}@vidly.com"
+        self.region = random.choice(REGIONS)
         self.created_date = fake.date_time_between_dates(
             start=datetime(year=2023, month=1, day=1), end=datetime.today()
         )
@@ -213,10 +217,8 @@ class Account(metaclass=Table):
 
     def after_all_generated(self):
         # Assign owner_id now that Users exist
-        if not self.owner_id and SFDCUser.instances:
+        if not self.owner_id:
             self.owner_id = SFDCUser.pick_existing("id")
-
-        # Assign products now that Products exist
         self.products = random.sample(PRODUCT_NAMES, random.randint(1, 10))
 
 def generate_opportunity_value():
@@ -325,6 +327,23 @@ class Opportunity(metaclass=Table):
 
 @dataclass
 @dateformat(DATE_FORMAT)
+class ProductUser(metaclass=Table):
+    id: str = field(init=False)
+    account_id: str = field(init=False)
+    email: str = field(init=False)
+    created_date: datetime = field(init=False)
+
+    def __post_init__(self):
+        account = Account.pick_existing_object()
+        self.account_id = account.id
+        self.email = f"user{random.randint(1, 1_000_000)}@vidly.com"
+        self.id = ProductUser.unique("product_user_id", fake.uuid4)
+        self.created_date = fake.date_time_between_dates(
+            start=datetime(year=2023, month=1, day=1), end=datetime.today()
+        )
+
+@dataclass
+@dateformat(DATE_FORMAT)
 class Usage(metaclass=Table):
     id: str = field(init=False)
     account_id: str
@@ -344,7 +363,7 @@ def generate_usage(max_days=30, max_rows=1_200_000):
     account_map = {a.id: a for a in Account.instances}
 
     customer_users = [
-        u for u in SFDCUser.instances
+        u for u in ProductUser.instances
         if u.account_id in account_map and account_map[u.account_id].status == "Customer"
     ]
 
@@ -370,22 +389,34 @@ def generate_usage(max_days=30, max_rows=1_200_000):
 
 
 if __name__ == "__main__":
-    # Generate Accounts first
+    # Generate Accounts
     Account.generate(count=fake.poisson(1000), load_existing=True)
 
-    # Generate Users now (so owner_id can exist)
-    SFDCUser.generate(count=len(Account.instances) * 3, load_existing=True)
+    # Generate Internal Users (30 AEs)
+    SFDCUser.generate(count=30, load_existing=True)
 
-    # Now finalize the Account world
+    # Finalize Accounts (assign owner_id + products)
     for account in Account.instances:
         account.after_all_generated()
+
+    # Generate External Product Users
+    for account in Account.instances:
+        if account.segment == "Enterprise":
+            num_users = random.randint(200, 1000)
+        elif account.segment == "MM":
+            num_users = random.randint(20, 100)
+        else:  # SMB
+            num_users = random.randint(1, 20)
+
+        for _ in range(num_users):
+            ProductUser(account_id=account.id)
 
     # Generate Contacts
     Contact.generate(count=fake.poisson(200), load_existing=True)
 
-    # Write Dimension tables
+    # Write Dimension Tables
     Table.writeall()
 
-    # Generate Usage
-    generate_usage(max_days=30)
+    # Generate Usage Data (limit to 1.2M rows for 240MB cap)
+    generate_usage(max_days=90, max_rows=1_200_000)
     Usage.write()
