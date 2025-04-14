@@ -370,7 +370,7 @@ if __name__ == "__main__":
     Account.generate(count=fake.poisson(1000), load_existing=True)
 
     # Generate Users now (so owner_id can exist)
-    SFDCUser.generate(count=fake.poisson(10), load_existing=True)
+    SFDCUser.generate(count=len(Account.instances) * 3, load_existing=True)
 
     # Now finalize the Account world
     for account in Account.instances:
