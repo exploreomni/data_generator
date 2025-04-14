@@ -114,22 +114,22 @@ class SFDCUser(metaclass=Table):
             )
 
 
-@dataclass
-class Contact(metaclass=Table):
-    id: str = field(init=False)
-    first_name: str = field(default_factory=fake.first_name)
-    last_name: str = field(default_factory=fake.last_name)
-    email: str = field(init=False)
-    account_id: str = field(init=False)
+# @dataclass
+# class Contact(metaclass=Table):
+#     id: str = field(init=False)
+#     first_name: str = field(default_factory=fake.first_name)
+#     last_name: str = field(default_factory=fake.last_name)
+#     email: str = field(init=False)
+#     account_id: str = field(init=False)
 
-    def __post_init__(self):
-        account: Account = random.choice(Account.instances)
-        self.account_id = account.id
-        self.email = f"{helpers.email_handle_from_name(self.first_name,self.last_name,random.random())}@{helpers.email_domain_from_url(account.website)}"
-        self.id = Contact.unique("sfdc_contact_id", fake.sfdc_contact_id)
+#     def __post_init__(self):
+#         account: Account = random.choice(Account.instances)
+#         self.account_id = account.id
+#         self.email = f"{helpers.email_handle_from_name(self.first_name,self.last_name,random.random())}@{helpers.email_domain_from_url(account.website)}"
+#         self.id = Contact.unique("sfdc_contact_id", fake.sfdc_contact_id)
 
-    def after_first_run(self):
-        ...
+#     def after_first_run(self):
+#         ...
 
 
 def random_account_created_date():
@@ -423,7 +423,7 @@ if __name__ == "__main__":
             ProductUser(account_id=account.id)
 
     # Generate Contacts
-    Contact.generate(count=fake.poisson(200), load_existing=True)
+    # Contact.generate(count=fake.poisson(200), load_existing=True)
 
     # Write Dimension Tables
     Table.writeall()
