@@ -336,34 +336,38 @@ class Usage(metaclass=Table):
     def __post_init__(self):
         self.id = Usage.unique("usage_id", fake.uuid4)
 
-def generate_usage(max_days=30):
+def generate_usage(max_days=30, max_rows=1_200_000):
     start_date = datetime(year=2023, month=1, day=1)
     end_date = datetime.today()
     date_cursor = max(end_date - timedelta(days=max_days), start_date)
 
-    # Map of account_id to account object (faster lookups)
     account_map = {a.id: a for a in Account.instances}
 
-    # Only generate usage for users tied to Customer Accounts
     customer_users = [
         u for u in SFDCUser.instances
         if u.account_id in account_map and account_map[u.account_id].status == "Customer"
     ]
 
+    row_count = 0
+
     while date_cursor <= end_date:
         for user in customer_users:
             account = account_map[user.account_id]
             for product_name in account.products:
-                baseline = random.randint(10, 120)
-                noise = random.randint(-5, 5)
                 Usage(
                     account_id=account.id,
                     user_id=user.id,
-                    product_id=product_name,  # product is now just a string
+                    product_id=product_name,
                     usage_date=date_cursor.date(),
-                    usage_min=max(1, baseline + noise),
+                    usage_min=max(1, random.randint(10, 120) + random.randint(-5, 5)),
                 )
+                row_count += 1
+
+                if row_count >= max_rows:
+                    print(f"Reached max row count of {max_rows}")
+                    return
         date_cursor += timedelta(days=1)
+
 
 if __name__ == "__main__":
     # Generate Accounts first
