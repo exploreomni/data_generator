@@ -95,23 +95,14 @@ class SFDCUser(metaclass=Table):
     region: str = field(init=False)
     role_id: str = field(default_factory=fake.sfdc_role_id)
     created_date: datetime = field(init=False)
-    account_id: str = field(init=False)
 
     def __post_init__(self):
-        account = Account.pick_existing_object()
-        self.account_id = account.id
         self.id = SFDCUser.unique("sfdc_user_id", fake.sfdc_user_id)
         self.email = f"{self.first_name}.{self.last_name}@vidly.com"
         self.region = random.choice(REGIONS)
         self.created_date = fake.date_time_between_dates(
             start=datetime(year=2023, month=1, day=1), end=datetime.today()
         )
-    
-    def after_first_run(self):
-        if not self.created_date:
-            self.created_date = fake.date_time_between_dates(
-                start=datetime(year=2023, month=1, day=1), end=datetime.today()
-            )
 
 
 # @dataclass
@@ -218,7 +209,7 @@ class Account(metaclass=Table):
     def after_all_generated(self):
         # Assign owner_id now that Users exist
         if not self.owner_id:
-            self.owner_id = SFDCUser.pick_existing("id")
+            self.owner_id = random.choice(SFDCUser.instances).id
         self.products = random.sample(PRODUCT_NAMES, random.randint(1, 10))
 
 def generate_opportunity_value():
