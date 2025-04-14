@@ -329,15 +329,27 @@ class Opportunity(metaclass=Table):
 @dateformat(DATE_FORMAT)
 class ProductUser(metaclass=Table):
     id: str = field(init=False)
-    account_id: str 
+    account_id: str
+    first_name: str = field(default_factory=fake.first_name)
+    last_name: str = field(default_factory=fake.last_name)
     email: str = field(init=False)
     created_date: datetime = field(init=False)
 
     def __post_init__(self):
-        account = Account.pick_existing_object()
-        self.account_id = account.id
-        self.email = f"user{random.randint(1, 1_000_000)}@vidly.com"
+        account = Account.pick_existing("id", id=self.account_id)
+
+        # Create domain from account name
+        base = account.name.lower()
+        domain = (
+            base.replace(" ", "")
+                .replace(",", "")
+                .replace("&", "and")
+                .replace("'", "")
+                .replace(".", "")
+        ) + ".com"
+
         self.id = ProductUser.unique("product_user_id", fake.uuid4)
+        self.email = f"{self.first_name.lower()}.{self.last_name.lower()}@{domain}"
         self.created_date = fake.date_time_between_dates(
             start=datetime(year=2023, month=1, day=1), end=datetime.today()
         )
