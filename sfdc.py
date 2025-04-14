@@ -329,7 +329,7 @@ class Opportunity(metaclass=Table):
 @dateformat(DATE_FORMAT)
 class ProductUser(metaclass=Table):
     id: str = field(init=False)
-    account_id: str = field(init=False)
+    account_id: str 
     email: str = field(init=False)
     created_date: datetime = field(init=False)
 
