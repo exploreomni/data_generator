@@ -332,23 +332,23 @@ class ProductUser(metaclass=Table):
     account_id: str
     first_name: str = field(default_factory=fake.first_name)
     last_name: str = field(default_factory=fake.last_name)
-    email: str = field(init=False)
+    # email: str = field(init=False)
     created_date: datetime = field(init=False)
 
     def __post_init__(self):
-        account = next(a for a in Account.instances if a.id == self.account_id)
+        Account.pick_existing("id")
 
-        base = account.name.lower()
-        domain = (
-            base.replace(" ", "")
-                .replace(",", "")
-                .replace("&", "and")
-                .replace("'", "")
-                .replace(".", "")
-        ) + ".com"
+        # base = account.name.lower()
+        # domain = (
+        #     base.replace(" ", "")
+        #         .replace(",", "")
+        #         .replace("&", "and")
+        #         .replace("'", "")
+        #         .replace(".", "")
+        # ) + ".com"
 
         self.id = ProductUser.unique("product_user_id", fake.uuid4)
-        self.email = f"{self.first_name.lower()}.{self.last_name.lower()}@{domain}"
+        # self.email = f"{self.first_name.lower()}.{self.last_name.lower()}@{domain}"
         self.created_date = fake.date_time_between_dates(
             start=datetime(year=2023, month=1, day=1), end=datetime.today()
         )
