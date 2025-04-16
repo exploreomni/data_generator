@@ -212,6 +212,12 @@ class Account(metaclass=Table):
             self.owner_id = random.choice(SFDCUser.instances).id
         self.products = random.sample(PRODUCT_NAMES, random.randint(1, 10))
 
+        # Assign biased weights: one or two products get heavy weight
+        num_products = len(self.products)
+        weights = [random.expovariate(1.0) for _ in range(num_products)]
+        total = sum(weights)
+        self.product_weights = [w / total for w in weights]  # Normalize to sum to 1
+
 def generate_opportunity_value():
     # Use a triangular distribution with min=30k, max=100k, mode=50k
     value = random.triangular(30000, 100000, 50000)
@@ -364,11 +370,14 @@ def generate_usage(max_days=30, max_rows=1_200_000):
     while date_cursor <= end_date:
         for user in customer_users:
             account = account_map[user.account_id]
-            
-            # Explicitly sample random products per user per day
-            daily_products = random.sample(account.products, random.randint(1, len(account.products)))
-            
-            for product_name in daily_products:
+            products = account.products
+            weights = account.product_weights
+
+            # Biased sampling: pick N products with skew
+            n = random.randint(1, min(3, len(products)))
+            sampled_products = random.choices(products, weights=weights, k=n)
+
+            for product_name in sampled_products:
                 Usage(
                     account_id=user.account_id,
                     user_id=user.id,
