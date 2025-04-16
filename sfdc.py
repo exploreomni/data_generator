@@ -324,7 +324,8 @@ class ProductUser(metaclass=Table):
     first_name: str = field(default_factory=fake.first_name)
     last_name: str = field(default_factory=fake.last_name)
     created_date: datetime = field(init=False)
-    products: list = field(init=False)  # New field here
+    products: list = field(default_factory=list)  # initialize empty
+
 
     def __post_init__(self):
         account = Account.pick_existing_object(lambda a: a.id == self.account_id)
@@ -333,10 +334,6 @@ class ProductUser(metaclass=Table):
         self.created_date = fake.date_time_between_dates(
             start=datetime(year=2023, month=1, day=1), end=datetime.today()
         )
-
-        # Assign random subset of account products (more variability)
-        num_products = random.randint(1, len(account.products))
-        self.products = random.sample(account.products, num_products)
 
 @dataclass
 @dateformat(DATE_FORMAT)
@@ -402,11 +399,13 @@ if __name__ == "__main__":
         else:  # SMB
             num_users = random.randint(1, 20)
 
-        for _ in range(num_users):
-            ProductUser(account_id=account.id)
+        # create users
+        users = [ProductUser(account_id=account.id) for _ in range(num_users)]
 
-    # Generate Contacts
-    # Contact.generate(count=fake.poisson(200), load_existing=True)
+        # assign products to users explicitly AFTER account products set
+        for user in users:
+            num_products = random.randint(1, len(account.products))
+            user.products = random.sample(account.products, num_products)
 
     # Write Dimension Tables
     Table.writeall()
