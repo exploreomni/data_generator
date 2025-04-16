@@ -327,7 +327,7 @@ class ProductUser(metaclass=Table):
     products: list = field(init=False)  # New field here
 
     def __post_init__(self):
-        account = Account.pick_existing("id", self.account_id)
+        account = Account.pick_existing_object(lambda a: a.id == self.account_id)
 
         self.id = ProductUser.unique("product_user_id", fake.uuid4)
         self.created_date = fake.date_time_between_dates(
