@@ -313,7 +313,7 @@ class Opportunity(metaclass=Table):
                 self.forecast_category = "Closed"
                 
                 if self.stage_name == "Closed Won":
-                    account = Account.pick_existing("id", id=self.account_id)
+                    account = Account.pick_existing("id", self.account_id)
                     account.status = "Customer"
 
 @dataclass
@@ -327,7 +327,7 @@ class ProductUser(metaclass=Table):
     products: list = field(init=False)  # New field here
 
     def __post_init__(self):
-        account = Account.pick_existing("id", id=self.account_id)
+        account = Account.pick_existing("id", self.account_id)
 
         self.id = ProductUser.unique("product_user_id", fake.uuid4)
         self.created_date = fake.date_time_between_dates(
