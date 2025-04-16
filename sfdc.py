@@ -324,7 +324,6 @@ class ProductUser(metaclass=Table):
     first_name: str = field(default_factory=fake.first_name)
     last_name: str = field(default_factory=fake.last_name)
     created_date: datetime = field(init=False)
-    products: list = field(default_factory=list)  # initialize empty
 
 
     def __post_init__(self):
@@ -364,7 +363,12 @@ def generate_usage(max_days=30, max_rows=1_200_000):
 
     while date_cursor <= end_date:
         for user in customer_users:
-            for product_name in user.products:  # Now using user's own product set
+            account = account_map[user.account_id]
+            
+            # Explicitly sample random products per user per day
+            daily_products = random.sample(account.products, random.randint(1, len(account.products)))
+            
+            for product_name in daily_products:
                 Usage(
                     account_id=user.account_id,
                     user_id=user.id,
