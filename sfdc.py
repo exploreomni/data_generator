@@ -323,26 +323,20 @@ class ProductUser(metaclass=Table):
     account_id: str
     first_name: str = field(default_factory=fake.first_name)
     last_name: str = field(default_factory=fake.last_name)
-    # email: str = field(init=False)
     created_date: datetime = field(init=False)
+    products: list = field(init=False)  # New field here
 
     def __post_init__(self):
-        Account.pick_existing("id")
-
-        # base = account.name.lower()
-        # domain = (
-        #     base.replace(" ", "")
-        #         .replace(",", "")
-        #         .replace("&", "and")
-        #         .replace("'", "")
-        #         .replace(".", "")
-        # ) + ".com"
+        account = Account.pick_existing("id", self.account_id)
 
         self.id = ProductUser.unique("product_user_id", fake.uuid4)
-        # self.email = f"{self.first_name.lower()}.{self.last_name.lower()}@{domain}"
         self.created_date = fake.date_time_between_dates(
             start=datetime(year=2023, month=1, day=1), end=datetime.today()
         )
+
+        # Assign random subset of account products (more variability)
+        num_products = random.randint(1, len(account.products))
+        self.products = random.sample(account.products, num_products)
 
 @dataclass
 @dateformat(DATE_FORMAT)
@@ -373,10 +367,9 @@ def generate_usage(max_days=30, max_rows=1_200_000):
 
     while date_cursor <= end_date:
         for user in customer_users:
-            account = account_map[user.account_id]
-            for product_name in account.products:
+            for product_name in user.products:  # Now using user's own product set
                 Usage(
-                    account_id=account.id,
+                    account_id=user.account_id,
                     user_id=user.id,
                     product_id=product_name,
                     usage_date=date_cursor.date(),
@@ -388,7 +381,6 @@ def generate_usage(max_days=30, max_rows=1_200_000):
                     print(f"Reached max row count of {max_rows}")
                     return
         date_cursor += timedelta(days=1)
-
 
 if __name__ == "__main__":
     # Generate Accounts
