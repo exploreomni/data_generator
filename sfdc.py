@@ -188,12 +188,12 @@ class Account(metaclass=Table):
         ]
 
     def after_all_generated(self):
-       if not self.owner_id:
-        user = random.choice(SFDCUser.instances)
-        self.owner_id = user.id
+        if not self.owner_id:
+            user = random.choice(SFDCUser.instances)
+            self.owner_id = user.id
 
-        for opp in self.opportunities:
-            opp.owner_id = user.id
+            for opp in self.opportunities:
+                opp.owner_id = user.id
 
 
         self.products = random.sample(PRODUCT_NAMES, random.randint(1, 10))
