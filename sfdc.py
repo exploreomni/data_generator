@@ -188,13 +188,13 @@ class Account(metaclass=Table):
         ]
 
     def after_all_generated(self):
-        # Assign owner_id now that Users exist
-        if not self.owner_id:
-            self.owner_id = random.choice(SFDCUser.instances).id
+       if not self.owner_id:
+        user = random.choice(SFDCUser.instances)
+        self.owner_id = user.id
 
-        # Ensure the owner_id matches the first Opportunity's owner_id
-        if self.opportunities:
-            self.owner_id = self.opportunities[0].owner_id
+        for opp in self.opportunities:
+            opp.owner_id = user.id
+
 
         self.products = random.sample(PRODUCT_NAMES, random.randint(1, 10))
 
@@ -230,17 +230,8 @@ class Opportunity(metaclass=Table):
         if account:
             self.id = Opportunity.unique("id", fake.sfdc_opportunity_id)
 
-            # Owner assignment logic
-            eligible_users = [u for u in SFDCUser.instances if u.role_id.endswith("09yOipW000000")]
-            if eligible_users:
-                counts = {u.id: 0 for u in eligible_users}
-                for opp in Opportunity.instances:
-                    if opp.owner_id in counts:
-                        counts[opp.owner_id] += 1
-                selected_user = min(eligible_users, key=lambda u: counts[u.id])
-                self.owner_id = selected_user.id
-            else:
-                self.owner_id = None
+            # Placeholder only — gets overwritten in Account.after_all_generated()
+            self.owner_id = None
 
             # Set opened_date
             self.opened_date = opened_on or fake.date_time_between_dates(
