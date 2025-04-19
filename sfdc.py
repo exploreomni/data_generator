@@ -308,48 +308,48 @@ class Opportunity(metaclass=Table):
                     account = Account.pick_existing("id", self.account_id)
                     account.status = "Customer"
         
-        # Generate historical snapshots for the opportunity
-        snapshot_dates = generate_daily_snapshots(self.opened_date, self.closed_date)
+        # # Generate historical snapshots for the opportunity
+        # snapshot_dates = generate_daily_snapshots(self.opened_date, self.closed_date)
         
-        for snapshot_date in snapshot_dates:
-            OpportunityHistory(opportunity=self, snapshot_date=snapshot_date)
+        # for snapshot_date in snapshot_dates:
+        #     OpportunityHistory(opportunity=self, snapshot_date=snapshot_date)
 
 
 def generate_daily_snapshots(opened_date, closed_date):
     # Generate a list of dates from opened_date to closed_date (inclusive)
     return [opened_date + timedelta(days=i) for i in range((closed_date - opened_date).days + 1)]
 
-@dataclass
-@dateformat(DATE_FORMAT)
-class OpportunityHistory(metaclass=Table):
-    id: str = field(init=False)
-    opportunity_id: str = field(init=False)
-    snapshot_date: datetime = field(init=False)
-    value: int = field(init=False)
-    account_id: str = field(init=False)
-    owner_id: str = field(init=False)
-    opened_date: date = field(init=False, metadata={"dateformat": DATE_FORMAT})
-    closed_date: date = field(init=False, metadata={"dateformat": DATE_FORMAT})
-    name: str = field(init=False)
-    status: str = field(init=False)
-    stage_name: str = field(init=False)
-    forecast_category: str = field(init=False)
-    business_type: str = field(init=False)
+# @dataclass
+# @dateformat(DATE_FORMAT)
+# class OpportunityHistory(metaclass=Table):
+#     id: str = field(init=False)
+#     opportunity_id: str = field(init=False)
+#     snapshot_date: datetime = field(init=False)
+#     value: int = field(init=False)
+#     account_id: str = field(init=False)
+#     owner_id: str = field(init=False)
+#     opened_date: date = field(init=False, metadata={"dateformat": DATE_FORMAT})
+#     closed_date: date = field(init=False, metadata={"dateformat": DATE_FORMAT})
+#     name: str = field(init=False)
+#     status: str = field(init=False)
+#     stage_name: str = field(init=False)
+#     forecast_category: str = field(init=False)
+#     business_type: str = field(init=False)
 
-    def __post_init__(self, opportunity: Opportunity, snapshot_date: datetime):
-        self.id = OpportunityHistory.unique("history_id", fake.uuid4)
-        self.opportunity_id = opportunity.id
-        self.snapshot_date = snapshot_date
-        self.value = opportunity.value
-        self.account_id = opportunity.account_id
-        self.owner_id = opportunity.owner_id
-        self.opened_date = opportunity.opened_date
-        self.closed_date = opportunity.closed_date
-        self.name = opportunity.name
-        self.status = opportunity.status
-        self.stage_name = opportunity.stage_name
-        self.forecast_category = opportunity.forecast_category
-        self.business_type = opportunity.business_type
+#     def __post_init__(self, opportunity: Opportunity, snapshot_date: datetime):
+#         self.id = OpportunityHistory.unique("history_id", fake.uuid4)
+#         self.opportunity_id = opportunity.id
+#         self.snapshot_date = snapshot_date
+#         self.value = opportunity.value
+#         self.account_id = opportunity.account_id
+#         self.owner_id = opportunity.owner_id
+#         self.opened_date = opportunity.opened_date
+#         self.closed_date = opportunity.closed_date
+#         self.name = opportunity.name
+#         self.status = opportunity.status
+#         self.stage_name = opportunity.stage_name
+#         self.forecast_category = opportunity.forecast_category
+#         self.business_type = opportunity.business_type
 
 @dataclass
 @dateformat(DATE_FORMAT)
@@ -453,7 +453,7 @@ if __name__ == "__main__":
     generate_usage(max_days=90, max_rows=1_200_000)
     Usage.write()
 
-    OpportunityHistory.write()
+    # OpportunityHistory.write()
 
     # Write Dimension Tables
     Table.writeall()
