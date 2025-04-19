@@ -373,7 +373,7 @@ class Usage(metaclass=Table):
     def __post_init__(self):
         self.id = Usage.unique("usage_id", fake.uuid4)
 
-def generate_usage(max_days=180, max_rows=10_000_000):
+def generate_usage(max_days=180, max_rows=50_000_000):
     start_date = datetime(year=2023, month=1, day=1)
     end_date = datetime.today()
     date_cursor = max(end_date - timedelta(days=max_days), start_date)
@@ -414,7 +414,7 @@ def generate_usage(max_days=180, max_rows=10_000_000):
 
 if __name__ == "__main__":
     # Generate Accounts
-    Account.generate(count=fake.poisson(100))
+    Account.generate(count=fake.poisson(1000))
 
     # Generate Internal Users (30 AEs)
     SFDCUser.generate(count=30)
@@ -441,7 +441,7 @@ if __name__ == "__main__":
             user.products = random.sample(account.products, num_products)
 
     # Generate Usage Data (limit to 1.2M rows for 240MB cap)
-    generate_usage(max_days=180, max_rows=10_000_000)
+    generate_usage(max_days=180, max_rows=50_000_000)
     Usage.write()
 
     # OpportunityHistory.write()
