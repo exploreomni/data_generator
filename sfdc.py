@@ -326,6 +326,39 @@ class Opportunity(metaclass=Table):
                 if self.stage_name == "Closed Won":
                     account = Account.pick_existing("id", self.account_id)
                     account.status = "Customer"
+        
+        OpportunityHistory(opportunity=self)
+
+@dataclass
+@dateformat(DATE_FORMAT)
+class OpportunityHistory(metaclass=Table):
+    id: str = field(init=False)
+    opportunity_id: str = field(init=False)
+    snapshot_date: datetime = field(default_factory=datetime.now)
+    value: int = field(init=False)
+    account_id: str = field(init=False)
+    owner_id: str = field(init=False)
+    opened_date: date = field(init=False, metadata={"dateformat": DATE_FORMAT})
+    closed_date: date = field(init=False, metadata={"dateformat": DATE_FORMAT})
+    name: str = field(init=False)
+    status: str = field(init=False)
+    stage_name: str = field(init=False)
+    forecast_category: str = field(init=False)
+    business_type: str = field(init=False)
+
+    def __post_init__(self, opportunity: Opportunity):
+        self.id = OpportunityHistory.unique("history_id", fake.uuid4)
+        self.opportunity_id = opportunity.id
+        self.value = opportunity.value
+        self.account_id = opportunity.account_id
+        self.owner_id = opportunity.owner_id
+        self.opened_date = opportunity.opened_date
+        self.closed_date = opportunity.closed_date
+        self.name = opportunity.name
+        self.status = opportunity.status
+        self.stage_name = opportunity.stage_name
+        self.forecast_category = opportunity.forecast_category
+        self.business_type = opportunity.business_type
 
 @dataclass
 @dateformat(DATE_FORMAT)
@@ -428,6 +461,8 @@ if __name__ == "__main__":
     # Generate Usage Data (limit to 1.2M rows for 240MB cap)
     generate_usage(max_days=90, max_rows=1_200_000)
     Usage.write()
+
+    OpportunityHistory.write()
 
     # Write Dimension Tables
     Table.writeall()
