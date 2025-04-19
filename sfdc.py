@@ -210,6 +210,11 @@ class Account(metaclass=Table):
         # Assign owner_id now that Users exist
         if not self.owner_id:
             self.owner_id = random.choice(SFDCUser.instances).id
+
+        # Ensure the owner_id matches the first Opportunity's owner_id
+        if self.opportunities:
+            self.owner_id = self.opportunities[0].owner_id
+
         self.products = random.sample(PRODUCT_NAMES, random.randint(1, 10))
 
         # Assign biased weights: one or two products get heavy weight
