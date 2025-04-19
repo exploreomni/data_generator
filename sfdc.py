@@ -104,25 +104,6 @@ class SFDCUser(metaclass=Table):
             start=datetime(year=2023, month=1, day=1), end=datetime.today()
         )
 
-
-# @dataclass
-# class Contact(metaclass=Table):
-#     id: str = field(init=False)
-#     first_name: str = field(default_factory=fake.first_name)
-#     last_name: str = field(default_factory=fake.last_name)
-#     email: str = field(init=False)
-#     account_id: str = field(init=False)
-
-#     def __post_init__(self):
-#         account: Account = random.choice(Account.instances)
-#         self.account_id = account.id
-#         self.email = f"{helpers.email_handle_from_name(self.first_name,self.last_name,random.random())}@{helpers.email_domain_from_url(account.website)}"
-#         self.id = Contact.unique("sfdc_contact_id", fake.sfdc_contact_id)
-
-#     def after_first_run(self):
-#         ...
-
-
 def random_account_created_date():
     today = datetime.today()
     start_date = datetime(year=2023, month=1, day=1)
@@ -327,14 +308,23 @@ class Opportunity(metaclass=Table):
                     account = Account.pick_existing("id", self.account_id)
                     account.status = "Customer"
         
-        OpportunityHistory(opportunity=self)
+        # Generate historical snapshots for the opportunity
+        snapshot_dates = generate_daily_snapshots(self.opened_date, self.closed_date)
+        
+        for snapshot_date in snapshot_dates:
+            OpportunityHistory(opportunity=self, snapshot_date=snapshot_date)
+
+
+def generate_daily_snapshots(opened_date, closed_date):
+    # Generate a list of dates from opened_date to closed_date (inclusive)
+    return [opened_date + timedelta(days=i) for i in range((closed_date - opened_date).days + 1)]
 
 @dataclass
 @dateformat(DATE_FORMAT)
 class OpportunityHistory(metaclass=Table):
     id: str = field(init=False)
     opportunity_id: str = field(init=False)
-    snapshot_date: datetime = field(default_factory=datetime.now)
+    snapshot_date: datetime = field(init=False)
     value: int = field(init=False)
     account_id: str = field(init=False)
     owner_id: str = field(init=False)
@@ -346,9 +336,10 @@ class OpportunityHistory(metaclass=Table):
     forecast_category: str = field(init=False)
     business_type: str = field(init=False)
 
-    def __post_init__(self, opportunity: Opportunity):
+    def __post_init__(self, opportunity: Opportunity, snapshot_date: datetime):
         self.id = OpportunityHistory.unique("history_id", fake.uuid4)
         self.opportunity_id = opportunity.id
+        self.snapshot_date = snapshot_date
         self.value = opportunity.value
         self.account_id = opportunity.account_id
         self.owner_id = opportunity.owner_id
