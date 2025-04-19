@@ -450,7 +450,7 @@ if __name__ == "__main__":
             user.products = random.sample(account.products, num_products)
 
     # Generate Usage Data (limit to 1.2M rows for 240MB cap)
-    generate_usage(max_days=90, max_rows=1_200_000)
+    generate_usage(max_days=180, max_rows=10_000_000)
     Usage.write()
 
     # OpportunityHistory.write()
